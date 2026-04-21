@@ -21,11 +21,12 @@ type File struct {
 }
 
 type ShareLink struct {
-	Token     string    `json:"token"`
-	FileID    string    `json:"file_id"`    //File.ID 참조
-	CreatedBy string    `json:"created_by"` //User.ID 참조
-	CreatedAt time.Time `json:"created_at"`
-	ExpiresAt time.Time `json:"expires_at"`
+	Token        string    `json:"token"`
+	FileID       string    `json:"file_id"`    //File.ID 참조
+	CreatedBy    string    `json:"created_by"` //User.ID 참조
+	CreatedAt    time.Time `json:"created_at"`
+	ExpiresAt    time.Time `json:"expires_at"`
+	PasswordHash string    `json:"-"`
 }
 
 type Session struct {
