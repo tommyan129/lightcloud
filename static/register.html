@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="/static/css/pico.min.css">
+    <title>회원가입 화면</title>
+</head>
+<body>
+    <main class="container">
+        <form id="register-form" method="POST" action="/register">
+            <label for="username">사용자 명</label>
+            <input type="text" id="username" name="username">
+            <label for="password">비밀번호</label>
+            <input type="password" id="password" name="password">
+            <label for="re_password">비밀번호 재입력</label>
+            <input type="password" id="re_password" name="re_password">
+            <button type="submit">회원가입</button>
+        </form>
+        <a href="/login">이미 계정이 있으신가요?</a>
+
+        <p id="err-msg"></p>
+    </main>
+    <script>
+        document.getElementById("register-form").addEventListener("submit", function(e){
+            e.preventDefault()
+
+            var username = document.getElementById("username").value
+            var password = document.getElementById("password").value
+            var re_password = document.getElementById("re_password").value
+
+            if(re_password != password) {
+                document.getElementById("err-msg").textContent="비밀번호가 다릅니다."
+                return
+            }
+
+
+            fetch("/register",{
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({username:username,password:password})
+            }).then(function(res) {
+                    if(res.status === 200){
+                        return res.json().then(function(data){
+                        document.getElementById("err-msg").textContent = data.message
+                        window.location.href="/login"
+                        })
+                    } else{
+                        document.getElementById("err-msg").textContent="이미 존재하는 아이디 입니다."
+                    }
+                })
+            })
+    </script>
+</body>
+</html>

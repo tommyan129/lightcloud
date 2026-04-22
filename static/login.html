@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="/static/css/pico.min.css">
+    <title>로그인 화면</title>
+</head>
+<body>
+    <main class="container">
+        <form id ="login-form" method="POST" action="/login">
+            <label for="username">사용자 명</label>
+            <input type="text" id="username" name="username">
+            <label for="password">비밀번호</label>
+            <input type="password" id="password" name="password">
+            <button type="submit">로그인</button>
+        </form>
+        <a href="/register">회원가입</a>
+
+        <p id="err-msg"></p>
+    </main>
+    <script>
+        document.getElementById("login-form").addEventListener("submit", function(e){
+            e.preventDefault()
+
+            var username = document.getElementById("username").value
+            var password = document.getElementById("password").value
+
+            fetch("/login",{
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({username:username,password:password})
+            }).then(function(res){
+                if(res.status === 200){
+                    document.getElementById("err-msg").textContent = data.message
+                    window.location.href="/main"
+                } else{
+                    document.getElementById("err-msg").textContent="아이디 또는 비밀번호가 틀렸습니다."
+                }
+            })
+        })
+    </script>
+</body>
+</html>
+
