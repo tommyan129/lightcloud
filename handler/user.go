@@ -9,13 +9,10 @@ import (
 	"net/http"
 	"time"
 
-	//"fmt"
-
 	"lightcloud/db"
 	"lightcloud/model"
 
 	"golang.org/x/crypto/bcrypt"
-	//"lightcloud/model"
 )
 
 func generateID() string {
@@ -29,7 +26,12 @@ func generateID() string {
 
 func Register(w http.ResponseWriter, r *http.Request) {
 
-	var existingName string
+	if r.Method == "GET" {
+		http.ServeFile(w, r, "static/register.html")
+		return
+	}
+
+	var existingID string
 	var req struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
@@ -41,7 +43,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := db.DB.QueryRow("SELECT ID FROM users WHERE Username = ?", req.Username).Scan(&existingName)
+	err := db.DB.QueryRow("SELECT ID FROM users WHERE Username = ?", req.Username).Scan(&existingID)
 	if err == nil {
 		w.WriteHeader(http.StatusConflict) // 409
 		return
@@ -77,6 +79,12 @@ func Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func Login(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method == "GET" {
+		http.ServeFile(w, r, "static/login.html")
+		return
+	}
+
 	var req struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
@@ -119,7 +127,6 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		session.ExpiresAt.Format(time.RFC3339),
 		session.CreatedAt.Format(time.RFC3339),
 	)
-
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -132,6 +139,32 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 		Secure:   true,
 		Path:     "/",
+	})
+
+	w.WriteHeader(http.StatusOK)
+
+}
+
+func Logout(w http.ResponseWriter, r *http.Request) {
+
+	cookie, err := r.Cookie("session")
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	token := cookie.Value
+
+	_, err = db.DB.Exec("DELETE FROM sessions WHERE Token = ?", token)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:    "session",
+		Value:   "",
+		Expires: time.Unix(0, 0),
+		Path:    "/",
 	})
 
 	w.WriteHeader(http.StatusOK)
