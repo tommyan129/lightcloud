@@ -333,3 +333,7 @@ func DownloadFiles(w http.ResponseWriter, r *http.Request) {
 		zipWriter.Close()
 	}
 }
+
+func MainPage(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "static/main.html")
+}
