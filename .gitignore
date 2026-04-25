@@ -2,4 +2,6 @@ uploads/
 *.sqlite
 *.db
 go.sum
-*.log
+dblog.log
+CLAUDE.md
+GEMINI.md

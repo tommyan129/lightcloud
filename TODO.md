@@ -2,6 +2,17 @@
 
 ## 중간발표 전
 
+### share.go 완성 (진행 중)
+- [x] `generateShareToken()` — base62 16자 토큰 생성
+- [x] `CreateShareLink` — session 확인까지
+- [ ] `CreateShareLink` — body 파싱, 권한 확인, INSERT 완성
+- [ ] `GetShareLinkFiles` — token으로 파일 목록 조회
+- [ ] `DownloadShareFile` — token + fileID로 개별 파일 다운로드
+- [ ] `main.go` 라우터 연결
+
+### db.go 버그 수정
+- [ ] `share_links` 테이블에 남은 잘못된 FOREIGN KEY 선언 제거
+
 ### 1. 파일 확장자 필터링
 - 업로드 시 `.exe`, `.bat`, `.sh`, `.ps1` 등 위험 확장자 차단
 - `filepath.Ext()`로 확장자 추출 후 금지 목록과 비교

@@ -16,6 +16,10 @@ func main() {
 
 	http.HandleFunc("/login", handler.Login)
 	http.HandleFunc("/register", handler.Register)
+	http.HandleFunc("/main", handler.MainPage)
+	http.HandleFunc("/files", handler.ListFiles)
+	http.HandleFunc("upload", handler.UploadFiles)
+	http.HandleFunc("/download", handler.DownloadFiles)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/login", http.StatusFound)
