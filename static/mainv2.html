@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CloudFiles</title>
+<style>
+/* ═══════════════════════════════════════════
+   DESIGN TOKENS
+═══════════════════════════════════════════ */
+@font-face {
+  font-family: 'Pretendard';
+  src: url('/static/fonts/Pretendard-Regular.ttf') format('truetype');
+  font-weight: 400;
+}
+:root {
+  --ff: 'Pretendard', sans-serif;
+  --ff-mono: 'Geist Mono', monospace;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --transition: 0.15s ease;
+
+  /* Light theme */
+  --bg: #faf9ff;
+  --surface: #ffffff;
+  --surface2: #f5f4ff;
+  --border: #e2e0ff;
+  --border-subtle: #ece9ff;
+  --text: #1a1830;
+  --text-muted: #6b6890;
+  --text-dim: #a09ec0;
+  --primary: #7c6fef;
+  --primary-hover: #6a5ddf;
+  --primary-bg: #f0eeff;
+  --primary-fg: #ffffff;
+  --danger: #f2724a;
+  --danger-bg: #fff0ee;
+  --shadow-sm: 0 1px 4px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+  --shadow-lg: 0 12px 40px rgba(0,0,0,0.12);
+}
+[data-theme="dark"] {
+  --bg: #0f0c1a;
+  --surface: #1a1635;
+  --surface2: #241f42;
+  --border: rgba(255,255,255,0.1);
+  --border-subtle: rgba(255,255,255,0.06);
+  --text: rgba(255,255,255,0.92);
+  --text-muted: rgba(255,255,255,0.45);
+  --text-dim: rgba(255,255,255,0.25);
+  --primary: #9d94f5;
+  --primary-hover: #b0a9f7;
+  --primary-bg: rgba(124,111,239,0.15);
+  --primary-fg: #ffffff;
+  --danger: #f2724a;
+  --danger-bg: rgba(242,114,74,0.15);
+  --shadow-sm: 0 1px 4px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.4);
+  --shadow-lg: 0 12px 40px rgba(0,0,0,0.5);
+}
+
+/* ═══════════════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: var(--ff);
+  font-size: 14px;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+button { font-family: var(--ff); cursor: pointer; }
+input, select { font-family: var(--ff); }
+a { text-decoration: none; }
+[hidden], [data-hidden] { display: none !important; }
+
+/* ═══════════════════════════════════════════
+   LAYOUT
+═══════════════════════════════════════════ */
+.app { display: flex; height: 100vh; overflow: hidden; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 210px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 1.25rem 0 1rem;
+}
+.logo {
+  display: flex; align-items: center; gap: .6rem;
+  padding: 0 1.25rem .75rem;
+  font-weight: 700; font-size: .9rem; color: var(--text);
+}
+.logo-mark {
+  width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+  background: linear-gradient(135deg, #7c6fef, #a259ff);
+  display: flex; align-items: center; justify-content: center;
+}
+.upload-wrap { padding: .25rem .75rem .75rem; }
+.btn-upload {
+  width: 100%; padding: .5rem; border-radius: var(--radius);
+  background: linear-gradient(135deg, #7c6fef, #a259ff);
+  color: #fff; border: none; font-size: .82rem; font-weight: 600;
+  display: flex; align-items: center; justify-content: center; gap: .4rem;
+  transition: opacity var(--transition);
+}
+.btn-upload:hover { opacity: .88; }
+.nav-label {
+  padding: .5rem 1.25rem .3rem;
+  font-size: .68rem; font-weight: 600; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--text-dim);
+}
+.nav-link {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .42rem 1.25rem; font-size: .82rem; font-weight: 500;
+  color: var(--text-muted); border-left: 2px solid transparent;
+  transition: all var(--transition);
+}
+.nav-link:hover { color: var(--primary); background: var(--primary-bg); }
+.nav-link.active { color: var(--primary); background: var(--primary-bg); border-left-color: var(--primary); }
+.nav-link .count { margin-left: auto; font-size: .7rem; color: var(--text-dim); }
+.storage {
+  margin-top: auto; padding: 1rem 1.25rem 0;
+  font-size: .72rem; color: var(--text-dim);
+}
+.storage-bar {
+  height: 4px; border-radius: 2px; background: var(--border);
+  margin-top: .3rem; overflow: hidden;
+}
+.storage-fill {
+  height: 100%; width: 48%; border-radius: 2px;
+  background: linear-gradient(90deg, #7c6fef, #a259ff);
+}
+
+/* ── Main ── */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.top-bar {
+  display: flex; align-items: center; gap: .65rem;
+  padding: 1rem 1.5rem .5rem; flex-wrap: wrap;
+}
+
+/* ── Search ── */
+.search-wrap { flex: 1; min-width: 180px; position: relative; }
+.search-wrap svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--text-dim); }
+.search-input {
+  width: 100%; padding: .5rem .75rem .5rem 2.2rem;
+  border: 1.5px solid var(--border); border-radius: var(--radius);
+  background: var(--surface); color: var(--text); font-size: .85rem;
+  outline: none; transition: border-color var(--transition);
+}
+.search-input:focus { border-color: var(--primary); }
+.search-input::placeholder { color: var(--text-dim); }
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex; align-items: center; gap: .35rem;
+  padding: .45rem .9rem; border-radius: var(--radius);
+  font-size: .82rem; font-weight: 500; border: 1.5px solid transparent;
+  transition: all var(--transition); white-space: nowrap;
+}
+.btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+.btn-primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+.btn-outline { background: transparent; color: var(--primary); border-color: var(--primary); }
+.btn-outline:hover { background: var(--primary-bg); }
+.btn-danger-outline { background: transparent; color: var(--danger); border-color: var(--danger); }
+.btn-danger-outline:hover { background: var(--danger-bg); }
+.btn-ghost {
+  background: transparent; border-color: transparent;
+  color: var(--text-muted); padding: .4rem;
+}
+.btn-ghost:hover { background: var(--surface2); color: var(--text); }
+.btn-icon {
+  width: 30px; height: 30px; padding: 0; border-radius: var(--radius);
+  display: flex; align-items: center; justify-content: center;
+  border: none; transition: all var(--transition);
+}
+.btn-dl { background: var(--primary-bg); color: var(--primary); }
+.btn-dl:hover { background: var(--primary); color: #fff; }
+.btn-del { background: var(--danger-bg); color: var(--danger); }
+.btn-del:hover { background: var(--danger); color: #fff; }
+.btn-share { background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary); }
+.btn-share:hover { background: var(--primary); color: #fff; }
+.btn-more { background: transparent; color: var(--text-muted); }
+.btn-more:hover { background: var(--surface2); color: var(--text); }
+
+/* ── View toggle ── */
+.view-toggle {
+  display: flex; background: var(--surface2); border-radius: var(--radius); padding: 2px; gap: 2px;
+}
+.view-toggle .btn-icon {
+  width: 28px; height: 28px; border-radius: 6px;
+  background: transparent; color: var(--text-muted);
+}
+.view-toggle .btn-icon.active {
+  background: var(--surface); color: var(--primary); box-shadow: var(--shadow-sm);
+}
+
+/* ── Dark toggle ── */
+.dark-toggle {
+  width: 30px; height: 30px; border-radius: var(--radius);
+  background: var(--surface2); border: none; color: var(--text-muted);
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition); flex-shrink: 0;
+}
+.dark-toggle:hover { background: var(--border); color: var(--text); }
+
+/* ── Filter chips ── */
+.filter-bar {
+  display: flex; align-items: center; gap: .4rem;
+  padding: .2rem 1.5rem .5rem; flex-wrap: wrap;
+}
+.filter-bar .label { font-size: .72rem; font-weight: 500; color: var(--text-dim); }
+.chip {
+  padding: .18rem .65rem; border-radius: 999px;
+  font-size: .72rem; font-weight: 500;
+  border: 1.5px solid var(--border); background: transparent;
+  color: var(--text-muted); cursor: pointer; white-space: nowrap;
+  transition: all var(--transition);
+}
+.chip:hover { border-color: var(--primary); color: var(--primary); }
+.chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+/* ── Table ── */
+.table-wrap { flex: 1; overflow-y: auto; padding: 0 1.5rem 1.5rem; }
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  text-align: left; font-size: .7rem; font-weight: 600; letter-spacing: .04em;
+  text-transform: uppercase; color: var(--text-dim); padding: .6rem .75rem;
+  border-bottom: 1.5px solid var(--border); white-space: nowrap;
+  cursor: pointer; user-select: none; transition: color var(--transition);
+}
+thead th:hover { color: var(--primary); }
+thead th.sorted { color: var(--primary); }
+tbody tr { transition: background var(--transition); }
+tbody tr:hover { background: var(--surface2); }
+tbody td { padding: .7rem .75rem; border-bottom: 1px solid var(--border-subtle); vertical-align: middle; }
+.file-cell { display: flex; align-items: center; gap: .65rem; }
+.ext-icon {
+  width: 32px; height: 38px; border-radius: 5px; flex-shrink: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border: 1.5px solid; gap: 2px; font-family: var(--ff-mono); font-size: .52rem; font-weight: 500;
+}
+.file-name { font-weight: 500; font-size: .85rem; }
+.mono { font-family: var(--ff-mono); font-size: .75rem; color: var(--text-muted); }
+.badge {
+  display: inline-block; padding: .1rem .45rem; border-radius: 999px;
+  font-size: .66rem; font-weight: 600; font-family: var(--ff-mono); white-space: nowrap;
+}
+.row-actions { display: flex; align-items: center; gap: .3rem; }
+
+/* ── Grid ── */
+.grid-wrap { flex: 1; overflow-y: auto; padding: 0 1.5rem 1.5rem; }
+.file-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: .75rem;
+}
+.grid-card {
+  padding: 1rem .75rem; border-radius: var(--radius-lg);
+  border: 1px solid var(--border); background: var(--surface);
+  display: flex; flex-direction: column; align-items: center; gap: .5rem;
+  transition: box-shadow var(--transition), border-color var(--transition);
+}
+.grid-card:hover { box-shadow: var(--shadow-md); border-color: var(--primary); }
+.grid-card .fname { font-size: .74rem; font-weight: 500; text-align: center; word-break: break-word; color: var(--text); }
+.grid-card .fsize { font-size: .66rem; font-family: var(--ff-mono); color: var(--text-dim); }
+
+/* ── Empty state ── */
+.empty { text-align: center; padding: 3rem 0; color: var(--text-dim); font-size: .88rem; }
+
+/* ── Dropdown ── */
+.dropdown-wrap { position: relative; }
+.dropdown-menu {
+  position: absolute; right: 0; top: calc(100% + 4px); z-index: 100;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+  min-width: 160px; overflow: hidden;
+  animation: dropdown-in .12s ease;
+}
+@keyframes dropdown-in { from { opacity:0; transform:translateY(-6px); } }
+.dropdown-menu button {
+  width: 100%; padding: .52rem .85rem; border: none; background: transparent;
+  text-align: left; font-size: .82rem; color: var(--text); cursor: pointer;
+  display: flex; align-items: center; gap: .5rem; transition: background var(--transition);
+}
+.dropdown-menu button:hover { background: var(--surface2); }
+.dropdown-menu .divider { height: 1px; background: var(--border-subtle); margin: .2rem 0; }
+.dropdown-menu .danger { color: var(--danger); }
+.dropdown-menu .danger:hover { background: var(--danger-bg); }
+
+/* ── Modals ── */
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,.45); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; padding: 1rem;
+}
+.modal {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+  padding: 1.5rem; width: 100%; max-width: 460px;
+  animation: modal-in .18s ease;
+}
+@keyframes modal-in { from { opacity:0; transform:translateY(10px); } }
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;
+}
+.modal-header h4 { font-size: .95rem; font-weight: 700; color: var(--text); }
+.modal-close {
+  background: none; border: none; color: var(--text-dim); font-size: 1.1rem;
+  cursor: pointer; padding: .2rem; line-height: 1; transition: color var(--transition);
+}
+.modal-close:hover { color: var(--text); }
+.modal-subtitle { font-size: .82rem; color: var(--text-muted); margin: -.5rem 0 .9rem; }
+.modal-footer { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1.25rem; }
+
+/* ── Form elements ── */
+.field { margin-bottom: .85rem; }
+.field label { display: block; font-size: .78rem; font-weight: 600; color: var(--text-muted); margin-bottom: .35rem; }
+.field input, .field select {
+  width: 100%; padding: .5rem .75rem; border-radius: var(--radius);
+  border: 1.5px solid var(--border); background: var(--bg); color: var(--text);
+  font-size: .85rem; outline: none; transition: border-color var(--transition);
+}
+.field input:focus, .field select:focus { border-color: var(--primary); }
+
+/* ── Upload drop zone ── */
+.drop-zone {
+  border: 2px dashed var(--border); border-radius: var(--radius-lg);
+  padding: 2rem 1rem; text-align: center; cursor: pointer;
+  color: var(--text-muted); transition: all .2s;
+}
+.drop-zone:hover, .drop-zone.dragover {
+  border-color: var(--primary); background: var(--primary-bg); color: var(--primary);
+}
+.drop-zone p { font-size: .85rem; margin: .5rem 0 .2rem; }
+.drop-zone small { font-size: .72rem; color: var(--text-dim); }
+.upload-list { margin-top: .75rem; display: flex; flex-direction: column; gap: .35rem; }
+.upload-item {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .4rem .65rem; border-radius: var(--radius);
+  background: var(--surface2); font-size: .8rem;
+}
+.upload-item .ui-name { flex: 1; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.upload-item .ui-size { font-family: var(--ff-mono); font-size: .7rem; color: var(--text-dim); white-space: nowrap; }
+.upload-item .ui-remove { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: .85rem; line-height:1; padding:0; }
+.upload-item .ui-remove:hover { color: var(--danger); }
+
+/* ── Share modal ── */
+.share-input-row { display: flex; gap: .5rem; margin-top: .5rem; }
+.share-input-row input {
+  flex: 1; padding: .5rem .75rem; border-radius: var(--radius);
+  border: 1.5px solid var(--border); background: var(--bg); color: var(--text);
+  font-family: var(--ff-mono); font-size: .78rem; outline: none;
+}
+.copy-toast { font-size: .76rem; color: var(--primary); margin-top: .35rem; height: 1rem; }
+.perm-label { font-size: .78rem; font-weight: 600; color: var(--text-muted); margin: .9rem 0 .4rem; display: block; }
+.perm-row { display: flex; gap: .4rem; }
+.perm-btn {
+  flex: 1; padding: .38rem; border-radius: var(--radius);
+  border: 1.5px solid var(--border); background: transparent;
+  color: var(--text-muted); font-size: .78rem; cursor: pointer;
+  transition: all var(--transition);
+}
+.perm-btn:hover { border-color: var(--primary); color: var(--primary); }
+.perm-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ════ SIDEBAR ════ -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M7 1C4.2 1 2 3.2 2 6c-1.1 0-2 .9-2 2s.9 2 2 2h10c1.1 0 2-.9 2-2s-.9-2-2-2c0-2.8-2.2-5-5-5z" fill="white"/>
+        </svg>
+      </div>
+      CloudFiles
+    </div>
+
+    <div class="upload-wrap">
+      <button class="btn-upload" id="btnUploadOpen">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+          <path d="M7 1v9M3 5l4-4 4 4M1 11h12" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        Upload
+      </button>
+    </div>
+
+    <div class="nav-label">Folders</div>
+    <nav id="folderNav">
+      <a href="#" class="nav-link active" data-folder="">
+        <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M2 5h5l2 2h9v10H2z" fill="currentColor" opacity=".2" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        All Files <span class="count" id="countAll">8</span>
+      </a>
+      <a href="#" class="nav-link" data-folder="f1">
+        <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M2 5h5l2 2h9v10H2z" fill="#7c6fef44" stroke="#7c6fef" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        Design Assets <span class="count">24</span>
+      </a>
+      <a href="#" class="nav-link" data-folder="f2">
+        <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M2 5h5l2 2h9v10H2z" fill="#f2724a44" stroke="#f2724a" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        Marketing <span class="count">11</span>
+      </a>
+      <a href="#" class="nav-link" data-folder="f3">
+        <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M2 5h5l2 2h9v10H2z" fill="#2bbfa444" stroke="#2bbfa4" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        Engineering <span class="count">38</span>
+      </a>
+      <a href="#" class="nav-link" data-folder="f4">
+        <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M2 5h5l2 2h9v10H2z" fill="#f5a62344" stroke="#f5a623" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        Legal <span class="count">7</span>
+      </a>
+    </nav>
+
+    <div class="storage">
+      <div>48.2 GB / 100 GB</div>
+      <div class="storage-bar"><div class="storage-fill"></div></div>
+    </div>
+  </aside>
+
+  <!-- ════ MAIN ════ -->
+  <main class="main">
+
+    <!-- Top bar -->
+    <div class="top-bar">
+      <div class="search-wrap">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M11 11l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <input class="search-input" type="search" id="searchInput" placeholder="Search files…">
+      </div>
+
+      <div class="view-toggle">
+        <button class="btn-icon active" id="btnList" title="List view">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 3h12M1 7h12M1 11h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+        <button class="btn-icon" id="btnGrid" title="Grid view">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="8" y="1" width="5" height="5" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="1" y="8" width="5" height="5" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="8" y="8" width="5" height="5" rx="1.5" stroke="currentColor" stroke-width="1.5"/></svg>
+        </button>
+      </div>
+
+      <button class="dark-toggle" id="btnTheme" title="Toggle dark mode">
+        <svg id="iconMoon" width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M13.5 10A6 6 0 0 1 6 2.5a6 6 0 1 0 7.5 7.5z" fill="currentColor"/></svg>
+        <svg id="iconSun"  width="15" height="15" viewBox="0 0 16 16" fill="none" data-hidden><circle cx="8" cy="8" r="3" fill="currentColor"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.2 3.2l1.4 1.4M11.4 11.4l1.4 1.4M3.2 12.8l1.4-1.4M11.4 4.6l1.4-1.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      </button>
+
+      <button class="btn btn-outline" id="btnShareSelected" data-hidden>
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="11" cy="3" r="1.8" stroke="currentColor" stroke-width="1.4"/><circle cx="3" cy="7" r="1.8" stroke="currentColor" stroke-width="1.4"/><circle cx="11" cy="11" r="1.8" stroke="currentColor" stroke-width="1.4"/><path d="M4.7 6l4-2M4.7 8l4 2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        공유
+      </button>
+
+      <button class="btn btn-danger-outline" id="btnDeleteSelected" data-hidden>
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M5 4V2h4v2M4 4l.8 8h4.4l.8-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        삭제 <span id="deleteCount">0</span>
+      </button>
+    </div>
+
+    <!-- Filter chips -->
+    <div class="filter-bar">
+      <span class="label">Filter:</span>
+      <div class="chip active" data-mime="">All</div>
+      <div class="chip" data-mime="pdf">PDF</div>
+      <div class="chip" data-mime="mp4">Video</div>
+      <div class="chip" data-mime="xls">Excel</div>
+      <div class="chip" data-mime="fig">Figma</div>
+      <div class="chip" data-mime="zip">ZIP</div>
+    </div>
+
+    <!-- List view -->
+    <div class="table-wrap" id="listView">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:36px"><input type="checkbox" id="selectAll"></th>
+            <th data-sort="name">Name</th>
+            <th data-sort="sizeNum">Size</th>
+            <th data-sort="mime">Type</th>
+            <th data-sort="uploaded">Uploaded</th>
+            <th style="width:130px">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="fileTableBody"></tbody>
+      </table>
+      <div class="empty" id="emptyList" data-hidden>No files found</div>
+    </div>
+
+    <!-- Grid view -->
+    <div class="grid-wrap" id="gridView" data-hidden>
+      <div class="file-grid" id="fileGrid"></div>
+      <div class="empty" id="emptyGrid" data-hidden>No files found</div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ════ UPLOAD MODAL ════ -->
+<div class="modal-backdrop" id="uploadModal" data-hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h4>파일 업로드</h4>
+      <button class="modal-close" data-close="uploadModal">✕</button>
+    </div>
+    <div class="drop-zone" id="dropZone">
+      <svg width="36" height="36" viewBox="0 0 40 40" fill="none">
+        <path d="M20 8v16M12 18l8-10 8 10M6 30h28" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <p>파일을 드래그하거나 클릭해서 선택</p>
+      <small>모든 파일 형식 지원 · 최대 500MB</small>
+    </div>
+    <input type="file" id="fileInput" multiple style="display:none">
+    <div class="upload-list" id="uploadList"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" data-close="uploadModal">취소</button>
+      <button class="btn btn-primary" id="btnConfirmUpload">업로드</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ SHARE MODAL ════ -->
+<div class="modal-backdrop" id="shareModal" data-hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h4>공유 링크</h4>
+      <button class="modal-close" data-close="shareModal">✕</button>
+    </div>
+    <p class="modal-subtitle" id="shareSubtitle"></p>
+    <div class="share-input-row">
+      <input type="text" id="shareLinkInput" readonly>
+      <button class="btn btn-primary" id="btnCopyLink">링크 복사</button>
+    </div>
+    <div class="copy-toast" id="copyToast"></div>
+    <span class="perm-label">접근 권한</span>
+    <div class="perm-row">
+      <button class="perm-btn active" data-perm="view">👁 보기</button>
+      <button class="perm-btn" data-perm="comment">💬 댓글</button>
+      <button class="perm-btn" data-perm="edit">✏️ 편집</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" data-close="shareModal">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ PERMISSION MODAL ════ -->
+<div class="modal-backdrop" id="permModal" data-hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h4 id="permModalTitle">권한 수정</h4>
+      <button class="modal-close" data-close="permModal">✕</button>
+    </div>
+    <p class="modal-subtitle" id="permSubtitle"></p>
+    <div class="field">
+      <label>접근 레벨</label>
+      <select id="permLevel">
+        <option value="private">🔒 비공개 (본인만)</option>
+        <option value="org">🏢 조직 내 공유</option>
+        <option value="public">🌐 공개 링크</option>
+      </select>
+    </div>
+    <div class="field" id="ownerField" data-hidden>
+      <label>소유자 이메일</label>
+      <input type="email" id="ownerEmail" placeholder="example@company.com">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" data-close="permModal">취소</button>
+      <button class="btn btn-primary" id="btnSavePerm">저장</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ═══════════════════════════════════════════
+   API LAYER — fetch 기반 REST 구조
+   실제 사용 시 BASE_URL과 각 함수의 주석 참고
+═══════════════════════════════════════════ */
+
+const api = {
+  /** GET /files?folder=&search=&mime= */
+  async getFiles(params = {}) {
+    // TODO: 실제 API 연동 시 아래 주석 해제
+    // const qs = new URLSearchParams(params).toString();
+    // const res = await fetch(`${BASE_URL}/files?${qs}`, { headers: authHeaders() });
+    // if (!res.ok) throw new Error(await res.text());
+    // return res.json();
+    return mockDelay(MOCK_FILES);
+  },
+
+  /** DELETE /files  body: { ids: [] } */
+  async deleteFiles(ids) {
+    // const res = await fetch(`${BASE_URL}/files`, {
+    //   method: 'DELETE',
+    //   headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    //   body: JSON.stringify({ ids }),
+    // });
+    // if (!res.ok) throw new Error(await res.text());
+    return mockDelay({ deleted: ids });
+  },
+
+  /** POST /files/upload  body: FormData */
+  async uploadFiles(fileList, folderId) {
+    // const form = new FormData();
+    // fileList.forEach(f => form.append('files', f));
+    // form.append('folder', folderId);
+    // const res = await fetch(`${BASE_URL}/files/upload`, {
+    //   method: 'POST',
+    //   headers: authHeaders(),   // Content-Type은 FormData가 자동 설정
+    //   body: form,
+    // });
+    // if (!res.ok) throw new Error(await res.text());
+    // return res.json();
+    const uploaded = fileList.map((f, i) => ({
+      id: Date.now() + i,
+      name: f.name,
+      size: formatBytes(f.size),
+      sizeNum: Math.round(f.size / 1024),
+      mime: f.name.split('.').pop().toLowerCase(),
+      uploaded: new Date().toISOString().slice(0, 10),
+      folder: folderId || 'f1',
+    }));
+    return mockDelay(uploaded);
+  },
+
+  /** PATCH /files/:id/permission */
+  async updatePermission(id, level) {
+    // const res = await fetch(`${BASE_URL}/files/${id}/permission`, {
+    //   method: 'PATCH',
+    //   headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    //   body: JSON.stringify({ level }),
+    // });
+    // if (!res.ok) throw new Error(await res.text());
+    return mockDelay({ id, level });
+  },
+
+  /** PATCH /files/:id/owner */
+  async updateOwner(id, email) {
+    // const res = await fetch(`${BASE_URL}/files/${id}/owner`, {
+    //   method: 'PATCH',
+    //   headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    //   body: JSON.stringify({ email }),
+    // });
+    // if (!res.ok) throw new Error(await res.text());
+    return mockDelay({ id, email });
+  },
+
+  /** POST /files/:id/share → returns share URL */
+  async createShareLink(ids, permission) {
+    // const res = await fetch(`${BASE_URL}/share`, {
+    //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    //   body: JSON.stringify({ ids, permission }),
+    // });
+    // if (!res.ok) throw new Error(await res.text());
+    // return res.json();
+    const token = Math.random().toString(36).slice(2, 10);
+    return mockDelay({ url: `https://cloudfiles.app/share/${token}` });
+  },
+};
+
+// function authHeaders() {
+//   const token = localStorage.getItem('cf_token');
+//   return token ? { Authorization: `Bearer ${token}` } : {};
+// }
+
+function mockDelay(data, ms = 80) {
+  return new Promise(r => setTimeout(() => r(data), ms));
+}
+
+/* ═══════════════════════════════════════════
+   MOCK DATA
+═══════════════════════════════════════════ */
+const EXT_COLOR = {
+  pdf:'#f2724a', fig:'#a259ff', mp4:'#2bbfa4',
+  xls:'#1e8a44', yml:'#f5a623', sql:'#3b82f6',
+  doc:'#2563eb', zip:'#6b7280', figma:'#a259ff',
+  xlsx:'#1e8a44', yaml:'#f5a623',
+};
+
+let MOCK_FILES = [
+  { id:1, name:'Brand Guidelines.pdf',  size:'4.2 MB',   sizeNum:4200,   mime:'pdf',  uploaded:'2026-04-22', folder:'f1' },
+  { id:2, name:'Hero Banner.figma',      size:'12.8 MB',  sizeNum:12800,  mime:'fig',  uploaded:'2026-04-20', folder:'f1' },
+  { id:3, name:'Campaign Video.mp4',     size:'238 MB',   sizeNum:238000, mime:'mp4',  uploaded:'2026-04-18', folder:'f2' },
+  { id:4, name:'Q2 Report.xlsx',         size:'1.1 MB',   sizeNum:1100,   mime:'xls',  uploaded:'2026-04-15', folder:'f2' },
+  { id:5, name:'API Spec v3.yaml',       size:'88 KB',    sizeNum:88,     mime:'yml',  uploaded:'2026-04-10', folder:'f3' },
+  { id:6, name:'Database Schema.sql',    size:'220 KB',   sizeNum:220,    mime:'sql',  uploaded:'2026-04-08', folder:'f3' },
+  { id:7, name:'NDA Template.docx',      size:'340 KB',   sizeNum:340,    mime:'doc',  uploaded:'2026-03-30', folder:'f4' },
+  { id:8, name:'Product Photos.zip',     size:'91 MB',    sizeNum:91000,  mime:'zip',  uploaded:'2026-03-22', folder:'f1' },
+];
+
+/* ═══════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════ */
+const state = {
+  files: [],
+  search: '',
+  folder: '',
+  mime: '',
+  sortKey: 'uploaded',
+  sortDir: 'desc',
+  view: 'list',
+  selected: new Set(),
+  theme: 'light',
+  loading: false,
+};
+
+/* ═══════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════ */
+function getColor(mime) { return EXT_COLOR[mime] || '#888'; }
+
+function formatBytes(b) {
+  if (b < 1024) return `${b} B`;
+  if (b < 1048576) return `${(b/1024).toFixed(0)} KB`;
+  return `${(b/1048576).toFixed(1)} MB`;
+}
+
+function extIconHTML(mime) {
+  const c = getColor(mime);
+  const label = mime.toUpperCase().slice(0,3);
+  return `<div class="ext-icon" style="color:${c};border-color:${c}33;background:${c}11">
+    <svg width="12" height="14" viewBox="0 0 14 16" fill="none">
+      <path d="M1 1h9l3 3v11H1z" fill="${c}22" stroke="${c}" stroke-width="1.2" stroke-linejoin="round"/>
+      <path d="M10 1l3 3h-3z" fill="${c}" opacity=".4"/>
+    </svg>
+    <span>${label}</span>
+  </div>`;
+}
+
+function getFiltered() {
+  return state.files
+    .filter(f => {
+      if (state.folder && f.folder !== state.folder) return false;
+      if (state.mime   && f.mime   !== state.mime)   return false;
+      if (state.search && !f.name.toLowerCase().includes(state.search.toLowerCase())) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      const v = a[state.sortKey] < b[state.sortKey] ? -1 : a[state.sortKey] > b[state.sortKey] ? 1 : 0;
+      return state.sortDir === 'asc' ? v : -v;
+    });
+}
+
+/* ═══════════════════════════════════════════
+   RENDER
+═══════════════════════════════════════════ */
+function render() {
+  const filtered = getFiltered();
+
+  // sort arrows
+  document.querySelectorAll('thead th[data-sort]').forEach(th => {
+    th.classList.toggle('sorted', th.dataset.sort === state.sortKey);
+    const key = th.dataset.sort;
+    const label = { name:'Name', sizeNum:'Size', mime:'Type', uploaded:'Uploaded' }[key];
+    th.textContent = label + (key === state.sortKey ? (state.sortDir === 'asc' ? ' ↑' : ' ↓') : '');
+  });
+
+  // ── list ──
+  const tbody = document.getElementById('fileTableBody');
+  tbody.innerHTML = filtered.map(f => `
+    <tr>
+      <td><input type="checkbox" data-id="${f.id}" ${state.selected.has(f.id) ? 'checked' : ''}></td>
+      <td>
+        <div class="file-cell">
+          ${extIconHTML(f.mime)}
+          <span class="file-name">${f.name}</span>
+        </div>
+      </td>
+      <td><span class="mono">${f.size}</span></td>
+      <td>
+        <span class="badge" style="background:${getColor(f.mime)}22;color:${getColor(f.mime)}">
+          ${f.mime.toUpperCase()}
+        </span>
+      </td>
+      <td><span class="mono">${f.uploaded}</span></td>
+      <td>
+        <div class="row-actions">
+          <button class="btn-icon btn-dl" title="다운로드">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M4 7l3 3 3-3M1 11h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+          <button class="btn-icon btn-share" title="공유" data-action="share" data-id="${f.id}">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="11" cy="3" r="1.8" stroke="currentColor" stroke-width="1.4"/><circle cx="3" cy="7" r="1.8" stroke="currentColor" stroke-width="1.4"/><circle cx="11" cy="11" r="1.8" stroke="currentColor" stroke-width="1.4"/><path d="M4.7 6l4-2M4.7 8l4 2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          </button>
+          <button class="btn-icon btn-del" title="삭제" data-action="delete" data-id="${f.id}">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M5 4V2h4v2M4 4l.8 8h4.4l.8-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+          <div class="dropdown-wrap">
+            <button class="btn-icon btn-more" title="더보기" data-action="more" data-id="${f.id}">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="3" r="1.2" fill="currentColor"/><circle cx="7" cy="7" r="1.2" fill="currentColor"/><circle cx="7" cy="11" r="1.2" fill="currentColor"/></svg>
+            </button>
+            <div class="dropdown-menu" id="dd-${f.id}" data-hidden>
+              <button data-action="perm" data-id="${f.id}">
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect x="3" y="6" width="8" height="7" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5 6V4a2 2 0 1 1 4 0v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+                권한 수정
+              </button>
+              <button data-action="owner" data-id="${f.id}">
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="4" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M1 13c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+                소유자 수정
+              </button>
+              <div class="divider"></div>
+              <button class="danger" data-action="delete" data-id="${f.id}">
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M5 4V2h4v2M4 4l.8 8h4.4l.8-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+
+  document.getElementById('emptyList').toggleAttribute('data-hidden', filtered.length > 0);
+
+  // ── grid ──
+  const grid = document.getElementById('fileGrid');
+  grid.innerHTML = filtered.map(f => `
+    <div class="grid-card">
+      ${extIconHTML(f.mime)}
+      <div class="fname">${f.name}</div>
+      <div class="fsize">${f.size}</div>
+      <div class="row-actions" style="justify-content:center">
+        <button class="btn-icon btn-dl" style="width:26px;height:26px" title="다운로드">
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M4 7l3 3 3-3M1 11h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+        <button class="btn-icon btn-share" style="width:26px;height:26px" data-action="share" data-id="${f.id}">
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><circle cx="11" cy="3" r="1.8" stroke="currentColor" stroke-width="1.4"/><circle cx="3" cy="7" r="1.8" stroke="currentColor" stroke-width="1.4"/><circle cx="11" cy="11" r="1.8" stroke="currentColor" stroke-width="1.4"/><path d="M4.7 6l4-2M4.7 8l4 2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </button>
+        <button class="btn-icon btn-del" style="width:26px;height:26px" data-action="delete" data-id="${f.id}">
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M5 4V2h4v2M4 4l.8 8h4.4l.8-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+        <div class="dropdown-wrap">
+          <button class="btn-icon btn-more" style="width:26px;height:26px" data-action="more" data-id="g${f.id}">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="3" r="1.2" fill="currentColor"/><circle cx="7" cy="7" r="1.2" fill="currentColor"/><circle cx="7" cy="11" r="1.2" fill="currentColor"/></svg>
+          </button>
+          <div class="dropdown-menu" id="dd-g${f.id}" data-hidden style="right:auto;left:0">
+            <button data-action="perm" data-id="${f.id}">권한 수정</button>
+            <button data-action="owner" data-id="${f.id}">소유자 수정</button>
+            <div class="divider"></div>
+            <button class="danger" data-action="delete" data-id="${f.id}">삭제</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('emptyGrid').toggleAttribute('data-hidden', filtered.length > 0);
+
+  // select-all state
+  const allCb = document.getElementById('selectAll');
+  allCb.checked = filtered.length > 0 && filtered.every(f => state.selected.has(f.id));
+  allCb.indeterminate = !allCb.checked && filtered.some(f => state.selected.has(f.id));
+
+  updateBulkButtons();
+}
+
+function updateBulkButtons() {
+  const n = state.selected.size;
+  document.getElementById('btnDeleteSelected').toggleAttribute('data-hidden', n === 0);
+  document.getElementById('btnShareSelected').toggleAttribute('data-hidden', n === 0);
+  document.getElementById('deleteCount').textContent = n;
+}
+
+/* ═══════════════════════════════════════════
+   ACTIONS
+═══════════════════════════════════════════ */
+async function deleteFiles(ids) {
+  await api.deleteFiles(ids);
+  MOCK_FILES = MOCK_FILES.filter(f => !ids.includes(f.id));
+  ids.forEach(id => state.selected.delete(id));
+  state.files = [...MOCK_FILES];
+  render();
+}
+
+async function loadFiles() {
+  state.files = await api.getFiles({ folder: state.folder, search: state.search, mime: state.mime });
+  MOCK_FILES = [...state.files]; // keep mock in sync
+  render();
+}
+
+/* ═══════════════════════════════════════════
+   MODAL HELPERS
+═══════════════════════════════════════════ */
+function openModal(id)  { document.getElementById(id).removeAttribute('data-hidden'); }
+function closeModal(id) { document.getElementById(id).setAttribute('data-hidden', ''); }
+
+document.querySelectorAll('.modal-backdrop').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) closeModal(el.id); });
+});
+document.querySelectorAll('[data-close]').forEach(btn => {
+  btn.addEventListener('click', () => closeModal(btn.dataset.close));
+});
+
+/* ═══════════════════════════════════════════
+   UPLOAD MODAL
+═══════════════════════════════════════════ */
+let pendingFiles = [];
+
+document.getElementById('btnUploadOpen').addEventListener('click', () => {
+  pendingFiles = [];
+  renderUploadList();
+  document.getElementById('fileInput').value = '';
+  openModal('uploadModal');
+});
+
+document.getElementById('dropZone').addEventListener('click', () => document.getElementById('fileInput').click());
+
+const dz = document.getElementById('dropZone');
+dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('dragover'); });
+dz.addEventListener('dragleave', ()  => dz.classList.remove('dragover'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('dragover');
+  addPendingFiles(e.dataTransfer.files);
+});
+document.getElementById('fileInput').addEventListener('change', e => addPendingFiles(e.target.files));
+
+function addPendingFiles(fileList) {
+  pendingFiles = [...pendingFiles, ...Array.from(fileList)];
+  renderUploadList();
+}
+function renderUploadList() {
+  document.getElementById('uploadList').innerHTML = pendingFiles.map((f, i) => `
+    <div class="upload-item">
+      <svg width="13" height="13" viewBox="0 0 14 16" fill="none"><path d="M1 1h9l3 3v11H1z" fill="var(--primary-bg)" stroke="var(--primary)" stroke-width="1.2" stroke-linejoin="round"/></svg>
+      <span class="ui-name">${f.name}</span>
+      <span class="ui-size">${formatBytes(f.size)}</span>
+      <button class="ui-remove" data-index="${i}">✕</button>
+    </div>
+  `).join('');
+}
+document.getElementById('uploadList').addEventListener('click', e => {
+  const btn = e.target.closest('[data-index]');
+  if (!btn) return;
+  pendingFiles.splice(Number(btn.dataset.index), 1);
+  renderUploadList();
+});
+
+document.getElementById('btnConfirmUpload').addEventListener('click', async () => {
+  if (!pendingFiles.length) return;
+  const uploaded = await api.uploadFiles(pendingFiles, state.folder);
+  MOCK_FILES = [...uploaded, ...MOCK_FILES];
+  state.files = [...MOCK_FILES];
+  pendingFiles = [];
+  closeModal('uploadModal');
+  render();
+});
+
+/* ═══════════════════════════════════════════
+   SHARE MODAL
+═══════════════════════════════════════════ */
+async function openShareModal(ids, subtitle) {
+  document.getElementById('shareSubtitle').textContent = subtitle;
+  const { url } = await api.createShareLink(ids, 'view');
+  document.getElementById('shareLinkInput').value = url;
+  document.getElementById('copyToast').textContent = '';
+  document.querySelectorAll('.perm-btn').forEach(b => b.classList.toggle('active', b.dataset.perm === 'view'));
+  openModal('shareModal');
+}
+
+document.getElementById('btnCopyLink').addEventListener('click', () => {
+  const val = document.getElementById('shareLinkInput').value;
+  navigator.clipboard?.writeText(val).catch(() => {});
+  const t = document.getElementById('copyToast');
+  t.textContent = '✓ 클립보드에 복사됐어요';
+  setTimeout(() => t.textContent = '', 2500);
+});
+
+document.querySelectorAll('.perm-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.perm-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+document.getElementById('btnShareSelected').addEventListener('click', () => {
+  const ids = [...state.selected];
+  openShareModal(ids, `선택된 ${ids.length}개 파일`);
+});
+
+/* ═══════════════════════════════════════════
+   PERMISSION MODAL
+═══════════════════════════════════════════ */
+let permTarget = null;
+let permMode = 'perm';
+
+function openPermModal(fileId, mode) {
+  permTarget = fileId;
+  permMode = mode;
+  const file = state.files.find(f => f.id === fileId);
+  document.getElementById('permModalTitle').textContent = mode === 'owner' ? '소유자 수정' : '권한 수정';
+  document.getElementById('permSubtitle').textContent = file?.name || '';
+  document.getElementById('ownerField').toggleAttribute('data-hidden', mode !== 'owner');
+  openModal('permModal');
+}
+
+document.getElementById('btnSavePerm').addEventListener('click', async () => {
+  if (permMode === 'owner') {
+    const email = document.getElementById('ownerEmail').value.trim();
+    if (!email) return;
+    await api.updateOwner(permTarget, email);
+  } else {
+    const level = document.getElementById('permLevel').value;
+    await api.updatePermission(permTarget, level);
+  }
+  closeModal('permModal');
+});
+
+/* ═══════════════════════════════════════════
+   DROPDOWN
+═══════════════════════════════════════════ */
+let openDd = null;
+function closeAllDropdowns() {
+  document.querySelectorAll('.dropdown-menu').forEach(m => m.setAttribute('data-hidden', ''));
+  openDd = null;
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.dropdown-wrap')) closeAllDropdowns();
+});
+
+/* ═══════════════════════════════════════════
+   EVENT DELEGATION
+═══════════════════════════════════════════ */
+function handleAction(action, id) {
+  const numId = Number(id);
+  switch (action) {
+    case 'delete':
+      closeAllDropdowns();
+      deleteFiles([numId]);
+      break;
+    case 'share':
+      closeAllDropdowns();
+      const f = state.files.find(x => x.id === numId);
+      openShareModal([numId], f?.name || '');
+      break;
+    case 'perm':
+      closeAllDropdowns();
+      openPermModal(numId, 'perm');
+      break;
+    case 'owner':
+      closeAllDropdowns();
+      openPermModal(numId, 'owner');
+      break;
+    case 'more': {
+      const ddId = `dd-${id}`;
+      if (openDd === ddId) { closeAllDropdowns(); break; }
+      closeAllDropdowns();
+      openDd = ddId;
+      document.getElementById(ddId)?.removeAttribute('data-hidden');
+      break;
+    }
+  }
+}
+
+document.getElementById('fileTableBody').addEventListener('click', e => {
+  const btn = e.target.closest('[data-action]');
+  const cb  = e.target.closest('input[type="checkbox"][data-id]');
+  if (btn) handleAction(btn.dataset.action, btn.dataset.id);
+  if (cb) {
+    const id = Number(cb.dataset.id);
+    cb.checked ? state.selected.add(id) : state.selected.delete(id);
+    updateBulkButtons();
+    render();
+  }
+});
+
+document.getElementById('fileGrid').addEventListener('click', e => {
+  const btn = e.target.closest('[data-action]');
+  if (btn) handleAction(btn.dataset.action, btn.dataset.id);
+});
+
+document.getElementById('selectAll').addEventListener('change', e => {
+  getFiltered().forEach(f => e.target.checked ? state.selected.add(f.id) : state.selected.delete(f.id));
+  updateBulkButtons();
+  render();
+});
+
+document.getElementById('btnDeleteSelected').addEventListener('click', () => {
+  deleteFiles([...state.selected]);
+});
+
+/* ═══════════════════════════════════════════
+   SEARCH, FILTER, SORT
+═══════════════════════════════════════════ */
+document.getElementById('searchInput').addEventListener('input', e => {
+  state.search = e.target.value;
+  render();
+});
+
+document.querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    state.mime = chip.dataset.mime;
+    render();
+  });
+});
+
+document.querySelectorAll('thead').forEach(thead => {
+  thead.addEventListener('click', e => {
+    const th = e.target.closest('th[data-sort]');
+    if (!th) return;
+    if (state.sortKey === th.dataset.sort) state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+    else { state.sortKey = th.dataset.sort; state.sortDir = 'asc'; }
+    render();
+  });
+});
+
+document.querySelectorAll('.nav-link').forEach(link => {
+  link.addEventListener('click', e => {
+    e.preventDefault();
+    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+    link.classList.add('active');
+    state.folder = link.dataset.folder;
+    render();
+  });
+});
+
+/* ═══════════════════════════════════════════
+   VIEW TOGGLE
+═══════════════════════════════════════════ */
+document.getElementById('btnList').addEventListener('click', () => {
+  state.view = 'list';
+  document.getElementById('listView').removeAttribute('data-hidden');
+  document.getElementById('gridView').setAttribute('data-hidden', '');
+  document.getElementById('btnList').classList.add('active');
+  document.getElementById('btnGrid').classList.remove('active');
+});
+document.getElementById('btnGrid').addEventListener('click', () => {
+  state.view = 'grid';
+  document.getElementById('gridView').removeAttribute('data-hidden');
+  document.getElementById('listView').setAttribute('data-hidden', '');
+  document.getElementById('btnGrid').classList.add('active');
+  document.getElementById('btnList').classList.remove('active');
+});
+
+/* ═══════════════════════════════════════════
+   DARK MODE
+═══════════════════════════════════════════ */
+document.getElementById('btnTheme').addEventListener('click', () => {
+  state.theme = state.theme === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', state.theme);
+  document.getElementById('iconMoon').toggleAttribute('data-hidden', state.theme === 'dark');
+  document.getElementById('iconSun').toggleAttribute('data-hidden',  state.theme === 'light');
+});
+
+/* ═══════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════ */
+loadFiles();
+</script>
+
+<template id="__bundler_thumbnail" data-bg-color="#faf9ff">
+  <svg viewBox="0 0 400 260" xmlns="http://www.w3.org/2000/svg">
+    <rect width="400" height="260" fill="#faf9ff"/>
+    <rect x="20" y="20" width="82" height="220" rx="8" fill="#fff" stroke="#e2e0ff" stroke-width="1.5"/>
+    <rect x="30" y="32" width="52" height="10" rx="5" fill="#7c6fef"/>
+    <rect x="30" y="58" width="62" height="7" rx="3.5" fill="#7c6fef" opacity=".2"/>
+    <rect x="30" y="72" width="62" height="7" rx="3.5" fill="#e2e0ff"/>
+    <rect x="30" y="86" width="62" height="7" rx="3.5" fill="#e2e0ff"/>
+    <rect x="30" y="100" width="62" height="7" rx="3.5" fill="#e2e0ff"/>
+    <rect x="114" y="20" width="266" height="220" rx="8" fill="#fff" stroke="#e2e0ff" stroke-width="1.5"/>
+    <rect x="124" y="32" width="180" height="16" rx="8" fill="#f5f4ff"/>
+    <rect x="124" y="60" width="246" height="1" fill="#e2e0ff"/>
+    <rect x="124" y="72" width="246" height="22" rx="4" fill="#f5f4ff"/>
+    <rect x="124" y="102" width="246" height="22" rx="4" fill="white"/>
+    <rect x="124" y="132" width="246" height="22" rx="4" fill="white"/>
+    <rect x="124" y="162" width="246" height="22" rx="4" fill="white"/>
+  </svg>
+</template>
+</body>
+</html>
