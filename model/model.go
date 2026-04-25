@@ -20,13 +20,31 @@ type File struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
+const (
+	PermRead = 1 << iota
+	PermDownload
+	PermWrite
+	PermDelete
+	PermManage
+)
+
+type FilePermission struct {
+	FileID     string `json:"file_id"`
+	UserID     string `json:"user_id"`
+	Permission int    `json:"permission"`
+}
+
 type ShareLink struct {
 	Token        string    `json:"token"`
-	FileID       string    `json:"file_id"`    //File.ID 참조
 	CreatedBy    string    `json:"created_by"` //User.ID 참조
 	CreatedAt    time.Time `json:"created_at"`
 	ExpiresAt    time.Time `json:"expires_at"`
 	PasswordHash string    `json:"-"`
+}
+
+type ShareLinkFile struct {
+	Token  string `json:"token"`
+	FileID string `json:"file_id"`
 }
 
 type Session struct {
