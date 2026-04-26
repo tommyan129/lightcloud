@@ -70,7 +70,7 @@ func DBInit() {
 	CreatedBy TEXT NOT NULL,
 	CreatedAt TEXT NOT NULL,
 	ExpiresAt TEXT NOT NULL,
-	PasswordHash TEXT,
+	PasswordHash TEXT
 	)`,
 		`
 	CREATE TABLE IF NOT EXISTS file_permissions(

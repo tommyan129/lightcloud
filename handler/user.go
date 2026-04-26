@@ -36,14 +36,18 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		Username string `json:"username"`
 		Password string `json:"password"`
 	}
-	json.NewDecoder(r.Body).Decode(&req)
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
 	if req.Username == "" || req.Password == "" {
 		w.WriteHeader(http.StatusBadRequest) // 400
 		return
 	}
 
-	err := db.DB.QueryRow("SELECT ID FROM users WHERE Username = ?", req.Username).Scan(&existingID)
+	err = db.DB.QueryRow("SELECT ID FROM users WHERE Username = ?", req.Username).Scan(&existingID)
 	if err == nil {
 		w.WriteHeader(http.StatusConflict) // 409
 		return
@@ -156,7 +160,7 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 
 	_, err = db.DB.Exec("DELETE FROM sessions WHERE Token = ?", token)
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
+		w.WriteHeader(http.StatusOK) //로그 아웃이니 세션 없으니 ㅇㅋ 니 로그인으로 돌아가라 시전
 		return
 	}
 

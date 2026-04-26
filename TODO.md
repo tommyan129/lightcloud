@@ -8,10 +8,30 @@
 - [ ] `CreateShareLink` — body 파싱, 권한 확인, INSERT 완성
 - [ ] `GetShareLinkFiles` — token으로 파일 목록 조회
 - [ ] `DownloadShareFile` — token + fileID로 개별 파일 다운로드
-- [ ] `main.go` 라우터 연결
+- [ ] `main.go`에 share 라우터 연결
 
-### db.go 버그 수정
-- [ ] `share_links` 테이블에 남은 잘못된 FOREIGN KEY 선언 제거
+### main.go 라우터 (완료)
+- [x] `/main` → `handler.MainPage`
+- [x] `/files` → `handler.ListFiles`
+- [x] `/upload` → `handler.UploadFiles`
+- [x] `/download` → `handler.DownloadFiles`
+
+### ListFiles 수정
+- [ ] 현재: `OwnerID = nowUser`인 파일만 반환
+- [ ] 변경: `{"mine": [...], "shared": [...]}` 두 목록 분리 반환
+- [ ] `shared` = `file_permissions`에 권한 있고 `OwnerID != nowUser`인 파일
+
+### /main UI (`static/main.html`)
+- [ ] 내 파일 목록 테이블 (이름, 크기, 업로드 날짜, 체크박스)
+- [ ] 공유받은 파일 목록 테이블 (동일 구조, 섹션 분리)
+- [ ] 파일 업로드 (다수 선택 가능)
+- [ ] 선택 파일 다운로드
+
+### /share UI (`static/share.html`)
+- [ ] token으로 공유 파일 목록 표시
+- [ ] 비밀번호 있는 링크면 입력 폼 먼저
+- [ ] 공유 링크 생성 + QR 코드 표시 (qrcode.js 로컬)
+- [ ] 개별 파일 다운로드
 
 ### 1. 파일 확장자 필터링
 - 업로드 시 `.exe`, `.bat`, `.sh`, `.ps1` 등 위험 확장자 차단
