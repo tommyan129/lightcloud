@@ -20,6 +20,11 @@ type File struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
+type FileListResponse struct {
+	Mine   []File `json:"mine"`
+	Shared []File `json:"shared"`
+}
+
 const (
 	PermRead = 1 << iota
 	PermDownload
