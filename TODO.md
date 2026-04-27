@@ -2,13 +2,13 @@
 
 ## 중간발표 전
 
-### share.go 완성 (진행 중)
+### share.go 완성 (완료)
 - [x] `generateShareToken()` — base62 16자 토큰 생성
-- [x] `CreateShareLink` — session 확인까지
-- [ ] `CreateShareLink` — body 파싱, 권한 확인, INSERT 완성
-- [ ] `GetShareLinkFiles` — token으로 파일 목록 조회
-- [ ] `DownloadShareFile` — token + fileID로 개별 파일 다운로드
-- [ ] `main.go`에 share 라우터 연결
+- [x] `CreateShareLink` — session 확인, body 파싱, 권한 확인, INSERT 완성
+- [x] `getLinkFiles()` — token으로 파일 목록 조회 (내부 헬퍼)
+- [x] `GetShareLink` — GET: 비밀번호 여부 확인 / POST: 비밀번호 검증 후 파일 목록 반환
+- [x] `DownloadShareFiles` — token 유효성 확인, map 기반 소속 검증, 단일 스트리밍 / 복수 zip
+- [x] `main.go`에 share 라우터 연결 (`/share`, `/share/create`, `/share/download`)
 
 ### main.go 라우터 (완료)
 - [x] `/main` → `handler.MainPage`
@@ -19,7 +19,10 @@
 ### ListFiles 수정
 - [ ] 현재: `OwnerID = nowUser`인 파일만 반환
 - [ ] 변경: `{"mine": [...], "shared": [...]}` 두 목록 분리 반환
-- [ ] `shared` = `file_permissions`에 권한 있고 `OwnerID != nowUser`인 파일
+- [ ] `mine` 쿼리: `SELECT ... FROM files WHERE OwnerID = ?`
+- [ ] `shared` 쿼리: `SELECT f.* FROM files f JOIN file_permissions fp ON f.ID = fp.FileID WHERE fp.UserID = ? AND f.OwnerID != ?`
+- [ ] `model.go`에 응답용 구조체 추가 (`Mine []File`, `Shared []File`)
+- [ ] UI: 같은 페이지에 섹션 분리 (탭 또는 구역) — 이름 중복 시 구역 자체가 mine/shared 구분해줌
 
 ### /main UI (`static/main.html`)
 - [ ] 내 파일 목록 테이블 (이름, 크기, 업로드 날짜, 체크박스)
