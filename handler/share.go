@@ -1,11 +1,16 @@
 package handler
 
 import (
+	"archive/zip"
 	"crypto/rand"
 	"database/sql"
 	"encoding/json"
+	"io"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strconv"
 	"time"
 
 	"lightcloud/db"
@@ -191,6 +196,7 @@ func GetShareLink(w http.ResponseWriter, r *http.Request) {
 			json.NewEncoder(w).Encode(struct {
 				RequirePassword bool `json:"requires_password"`
 			}{true})
+			return
 		}
 		if sharelink.PasswordHash == "" {
 
@@ -209,9 +215,8 @@ func GetShareLink(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			w.Write(data)
+			return
 		}
-		break
-
 	case http.MethodPost:
 		var req struct {
 			Password string `json:"password"`
@@ -248,9 +253,145 @@ func GetShareLink(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write(data)
-
-		break
+		return
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
+	}
+}
+
+func DownloadShareFiles(w http.ResponseWriter, r *http.Request) {
+
+	var sharelink model.ShareLink
+	var file model.File
+
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	err := db.DB.QueryRow("SELECT ExpiresAt From share_links WHERE Token = ?", token).Scan(&sharelink.ExpiresAt)
+
+	if err == sql.ErrNoRows {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+
+	if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	if time.Now().After(sharelink.ExpiresAt) {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	getFileIDs := r.URL.Query()["ids"]
+	if len(getFileIDs) == 0 {
+		http.Error(w, "emptyIDs", http.StatusBadRequest)
+		return
+	}
+
+	rows, err := db.DB.Query("SELECT FileID FROM share_link_files WHERE Token = ?", token)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	vaildIDs := map[string]bool{}
+
+	for rows.Next() {
+		var id string
+		err = rows.Scan(&id)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		vaildIDs[id] = true
+	}
+
+	filtered := getFileIDs[:0]
+	for _, id := range getFileIDs {
+		if vaildIDs[id] {
+			filtered = append(filtered, id)
+		}
+	}
+
+	getFileIDs = filtered
+
+	if len(getFileIDs) == 0 {
+		http.Error(w, "no valid file", http.StatusBadRequest)
+		return
+	}
+
+	if len(getFileIDs) == 1 {
+		file.ID = getFileIDs[0]
+		err = db.DB.QueryRow("SELECT OwnerID, OriginalName, StoredName, Size, MimeType FROM files WHERE ID = ?", file.ID).Scan(&file.OwnerID, &file.OriginalName, &file.StoredName, &file.Size, &file.MimeType)
+		if err != nil {
+			http.Error(w, "cant find file", http.StatusNotFound)
+			return
+		}
+
+		getFile, err := os.Open(filepath.Join(uploadFilesPath, file.StoredName))
+		if err != nil {
+			log.Printf("파일 열기 실패 [%s]: %v", file.StoredName, err)
+			http.Error(w, "file open failed", http.StatusInternalServerError)
+			return
+		}
+		defer getFile.Close()
+
+		w.Header().Set("Content-Type", file.MimeType)
+		w.Header().Set("Content-Disposition", "attachment; filename=\""+file.OriginalName+"\"")
+
+		_, err = io.Copy(w, getFile) //여기도 다운로드 현황 브라우져에서 자동으로 띄워주니 상관없나?
+		if err != nil {
+			log.Printf("파일 전송 실패 [%s]: %v", file.StoredName, err)
+			http.Error(w, "file send failed", http.StatusInternalServerError)
+			return
+		}
+
+	}
+
+	if len(getFileIDs) >= 2 {
+		zipName := time.Now().Format("200601021504") + "_" + strconv.Itoa(len(getFileIDs)) + ".zip"
+		w.Header().Set("Content-Type", "application/zip")
+		w.Header().Set("Content-Disposition", "attachment; filename=\""+zipName+"\"")
+
+		zipWriter := zip.NewWriter(w)
+
+		for _, id := range getFileIDs {
+			err = db.DB.QueryRow("SELECT OwnerID, OriginalName, StoredName, Size, MimeType FROM files WHERE ID = ?", id).Scan(&file.OwnerID, &file.OriginalName, &file.StoredName, &file.Size, &file.MimeType)
+			if err != nil {
+				http.Error(w, "cant find file", http.StatusNotFound)
+				return
+			}
+
+			getFile, err := os.Open(filepath.Join(uploadFilesPath, file.StoredName))
+			if err != nil {
+				log.Printf("파일 열기 실패 [%s]: %v", file.StoredName, err)
+				http.Error(w, "file open failed", http.StatusInternalServerError)
+				return
+			}
+
+			entry, err := zipWriter.Create(file.OriginalName)
+			if err != nil {
+				log.Printf("zip 항목 생성 실패 [%s]: %v", file.OriginalName, err)
+				getFile.Close()
+				zipWriter.Close()
+				return
+			}
+
+			_, err = io.Copy(entry, getFile) //여기도 다운로드 현황 브라우져에서 자동으로 띄워주니 상관없나?
+			if err != nil {
+				log.Printf("파일 전송 실패 [%s]: %v", file.StoredName, err)
+				http.Error(w, "file send failed", http.StatusInternalServerError)
+				getFile.Close()
+				return
+			}
+			getFile.Close()
+		}
+		zipWriter.Close()
 	}
 }
