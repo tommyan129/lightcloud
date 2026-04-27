@@ -20,6 +20,9 @@ func main() {
 	http.HandleFunc("/files", handler.ListFiles)
 	http.HandleFunc("/upload", handler.UploadFiles)
 	http.HandleFunc("/download", handler.DownloadFiles)
+	http.HandleFunc("/share", handler.GetShareLink)
+	http.HandleFunc("/share/create", handler.CreateShareLink)
+	http.HandleFunc("/share/download", handler.DownloadShareFiles)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/login", http.StatusFound)
