@@ -23,7 +23,7 @@ const uploadFilesPath = "./upload"
 func ListFiles(w http.ResponseWriter, r *http.Request) {
 
 	var nowUser string
-	var expiresAt time.Time
+	var session model.Session
 	var files []model.File
 
 	cookie, err := r.Cookie("session")
@@ -33,14 +33,14 @@ func ListFiles(w http.ResponseWriter, r *http.Request) {
 	}
 	token := cookie.Value
 
-	err = db.DB.QueryRow("SELECT UserID, ExpiresAt FROM sessions WHERE Token = ?", token).Scan(&nowUser, &expiresAt)
+	err = db.DB.QueryRow("SELECT UserID, ExpiresAt FROM sessions WHERE Token = ?", token).Scan(&nowUser, &session.ExpiresAt)
 
 	if err == sql.ErrNoRows {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	if time.Now().After(expiresAt) {
+	if time.Now().After(session.ExpiresAt) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -236,7 +236,6 @@ func DownloadFiles(w http.ResponseWriter, r *http.Request) {
 	}
 
 	getFileIDs := r.URL.Query()["id"]
-
 	if len(getFileIDs) == 0 {
 		http.Error(w, "emptyIDs", http.StatusBadRequest)
 		return
