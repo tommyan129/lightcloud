@@ -37,24 +37,8 @@ func generateShareToken() string {
 
 func CreateShareLink(w http.ResponseWriter, r *http.Request) {
 
-	var nowUser string
-	var expiresAt time.Time
-
-	cookie, err := r.Cookie("session")
+	nowUser, err := getSessionUser(r)
 	if err != nil {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
-		return
-	}
-	token := cookie.Value
-
-	err = db.DB.QueryRow("SELECT UserID, ExpiresAt FROM sessions WHERE Token = ?", token).Scan(&nowUser, &expiresAt)
-
-	if err == sql.ErrNoRows {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	if time.Now().After(expiresAt) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -171,7 +155,8 @@ func GetShareLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := db.DB.QueryRow("SELECT ExpiresAt, PasswordHash From share_links WHERE Token = ?", token).Scan(&sharelink.ExpiresAt, &sharelink.PasswordHash)
+	var expiresAtStr string
+	err := db.DB.QueryRow("SELECT ExpiresAt, PasswordHash From share_links WHERE Token = ?", token).Scan(&expiresAtStr, &sharelink.PasswordHash)
 
 	if err == sql.ErrNoRows {
 		http.Error(w, "not found", http.StatusNotFound)
@@ -183,6 +168,7 @@ func GetShareLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	sharelink.ExpiresAt, _ = time.Parse(time.RFC3339, expiresAtStr)
 	if time.Now().After(sharelink.ExpiresAt) {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -270,7 +256,8 @@ func DownloadShareFiles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := db.DB.QueryRow("SELECT ExpiresAt From share_links WHERE Token = ?", token).Scan(&sharelink.ExpiresAt)
+	var expiresAtStr string
+	err := db.DB.QueryRow("SELECT ExpiresAt From share_links WHERE Token = ?", token).Scan(&expiresAtStr)
 
 	if err == sql.ErrNoRows {
 		http.Error(w, "not found", http.StatusNotFound)
@@ -281,6 +268,8 @@ func DownloadShareFiles(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
+
+	sharelink.ExpiresAt, _ = time.Parse(time.RFC3339, expiresAtStr)
 
 	if time.Now().After(sharelink.ExpiresAt) {
 		w.WriteHeader(http.StatusNotFound)

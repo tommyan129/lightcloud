@@ -15,6 +15,23 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+func getSessionUser(r *http.Request) (string, error) {
+	cookie, err := r.Cookie("session")
+	if err != nil {
+		return "", err
+	}
+	var userID, expiresAtStr string
+	err = db.DB.QueryRow("SELECT UserID, ExpiresAt FROM sessions WHERE Token = ?", cookie.Value).Scan(&userID, &expiresAtStr)
+	if err != nil {
+		return "", err
+	}
+	expiresAt, err := time.Parse(time.RFC3339, expiresAtStr)
+	if err != nil || time.Now().After(expiresAt) {
+		return "", fmt.Errorf("session expired")
+	}
+	return userID, nil
+}
+
 func generateID() string {
 	b := make([]byte, 16)
 	_, err := rand.Read(b)
@@ -141,7 +158,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		Value:    token,
 		Expires:  session.ExpiresAt,
 		HttpOnly: true,
-		Secure:   true,
+		Secure:   false, // TODO: 배포 시 true로 변경 (HTTPS 필요)
 		Path:     "/",
 	})
 

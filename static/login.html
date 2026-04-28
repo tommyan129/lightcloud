@@ -31,7 +31,6 @@
                 body: JSON.stringify({username:username,password:password})
             }).then(function(res){
                 if(res.status === 200){
-                    document.getElementById("err-msg").textContent = data.message
                     window.location.href="/main"
                 } else{
                     document.getElementById("err-msg").textContent="아이디 또는 비밀번호가 틀렸습니다."

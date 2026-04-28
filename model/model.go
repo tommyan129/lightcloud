@@ -11,13 +11,13 @@ type User struct {
 }
 
 type File struct {
-	ID           string    `json:"id"`
-	OwnerID      string    `json:"owner_id"` //User.ID 참조
-	OriginalName string    `json:"original_name"`
-	StoredName   string    `json:"stored_name"`
-	Size         int64     `json:"size"`
-	MimeType     string    `json:"mime_type"`
-	CreatedAt    time.Time `json:"created_at"`
+	ID           string `json:"id"`
+	OwnerID      string `json:"owner_id"` //User.ID 참조
+	OriginalName string `json:"original_name"`
+	StoredName   string `json:"stored_name"`
+	Size         int64  `json:"size"`
+	MimeType     string `json:"mime_type"`
+	CreatedAt    string `json:"created_at"`
 }
 
 type FileListResponse struct {

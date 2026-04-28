@@ -16,19 +16,22 @@
 - [x] `/upload` → `handler.UploadFiles`
 - [x] `/download` → `handler.DownloadFiles`
 
-### ListFiles 수정
-- [ ] 현재: `OwnerID = nowUser`인 파일만 반환
-- [ ] 변경: `{"mine": [...], "shared": [...]}` 두 목록 분리 반환
-- [ ] `mine` 쿼리: `SELECT ... FROM files WHERE OwnerID = ?`
-- [ ] `shared` 쿼리: `SELECT f.* FROM files f JOIN file_permissions fp ON f.ID = fp.FileID WHERE fp.UserID = ? AND f.OwnerID != ?`
-- [ ] `model.go`에 응답용 구조체 추가 (`Mine []File`, `Shared []File`)
-- [ ] UI: 같은 페이지에 섹션 분리 (탭 또는 구역) — 이름 중복 시 구역 자체가 mine/shared 구분해줌
+### ListFiles 수정 (완료)
+- [x] `{"mine": [...], "shared": [...]}` 두 목록 분리 반환
+- [x] `model.go`에 응답용 구조체 추가 (`Mine []File`, `Shared []File`)
+- [ ] UI: mine/shared 섹션 분리 표시
 
-### /main UI (`static/main.html`)
-- [ ] 내 파일 목록 테이블 (이름, 크기, 업로드 날짜, 체크박스)
-- [ ] 공유받은 파일 목록 테이블 (동일 구조, 섹션 분리)
-- [ ] 파일 업로드 (다수 선택 가능)
-- [ ] 선택 파일 다운로드
+### cloud.html 백엔드 연결
+- [x] 폴더 사이드바 하드코딩 항목 제거 (f1~f4)
+- [x] `api.getFiles()` — GET /files fetch 구현
+- [x] `api.uploadFiles()` — POST /upload fetch 구현
+- [x] `btnConfirmUpload` 핸들러 — MOCK_FILES 제거, loadFiles() 호출
+- [x] 다운로드 버튼 — data-action, data-id 추가 (list + grid)
+- [x] `handleAction 'download'` case 추가
+- [x] `loadFiles()` — countAll 업데이트 추가
+- [x] `api.createShareLink()` — POST /share fetch 구현
+- [x] 필드 매핑 버그 수정 (`uploadedTime` → `uploaded`, size formatBytes 적용)
+- [ ] `api.deleteFiles()` — 백엔드 구현 후 연결
 
 ### /share UI (`static/share.html`)
 - [ ] token으로 공유 파일 목록 표시
@@ -36,10 +39,9 @@
 - [ ] 공유 링크 생성 + QR 코드 표시 (qrcode.js 로컬)
 - [ ] 개별 파일 다운로드
 
-### 1. 파일 확장자 필터링
-- 업로드 시 `.exe`, `.bat`, `.sh`, `.ps1` 등 위험 확장자 차단
-- `filepath.Ext()`로 확장자 추출 후 금지 목록과 비교
-- 차단 시 400 또는 415 응답
+### 백엔드 미완성
+- [ ] `DELETE /files` 파일 삭제 핸들러
+- [ ] 파일 확장자 필터링 — `.exe`, `.bat`, `.sh`, `.ps1` 업로드 차단
 
 ---
 
