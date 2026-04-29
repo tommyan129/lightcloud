@@ -660,12 +660,8 @@ function getColor(mime) { return EXT_COLOR[mime] || '#1a1830'; }
 function formatBytes(b) {
   if (b < 1024) return `${b} B`;
   if (b < 1048576) return `${(b/1024).toFixed(0)} KB`;
-<<<<<<< HEAD
   if (b < 1073741824) return `${(b/1048576).toFixed(1)} MB`;
   return `${(b/1073741824).toFixed(1)} GB`
-=======
-  return `${(b/1048576).toFixed(1)} MB`;
->>>>>>> 2db49c65bc38794c0b35b58634b6d8b7219e2a42
 }
 
 function extIconHTML(mime) {
@@ -838,11 +834,7 @@ async function renderFileFliter(){
 
 async function loadFiles() {
   const data = await api.getFiles()
-<<<<<<< HEAD
   state.files = [...data.mine, ...data.shared].map(f => ({ id: f.id, name: f.original_name, size: formatBytes(f.size), mime: f.mime_type.split('/')[1], uploadedTime: f.created_at.slice(0, 10), sizeNum: f.size}))
-=======
-  state.files = [...data.mine, ...data.shared].map(f => ({ id: f.id, name: f.original_name, size: f.size, mime: f.mime_type.split('/')[1], uploadedTime: f.created_at.slice(0, 10)}))
->>>>>>> 2db49c65bc38794c0b35b58634b6d8b7219e2a42
   document.getElementById('countAll').textContent = state.files.length
   renderFileFliter()
   render();
@@ -908,15 +900,9 @@ document.getElementById('uploadList').addEventListener('click', e => {
 document.getElementById('btnConfirmUpload').addEventListener('click', async () => {
   if (!pendingFiles.length) return;
   try {
-<<<<<<< HEAD
     closeModal('uploadModal');
     await api.uploadFiles(pendingFiles);
     pendingFiles = [];
-=======
-    await api.uploadFiles(pendingFiles);
-    pendingFiles = [];
-    closeModal('uploadModal');
->>>>>>> 2db49c65bc38794c0b35b58634b6d8b7219e2a42
     await loadFiles();
   } catch (e) {
     alert('업로드 실패: ' + e.message);
@@ -1004,7 +990,6 @@ document.addEventListener('click', e => {
 /* ═══════════════════════════════════════════
    EVENT DELEGATION
 ═══════════════════════════════════════════ */
-<<<<<<< HEAD
 function handleAction(action, id) {
   switch (action) {
     case 'delete':
@@ -1015,18 +1000,6 @@ function handleAction(action, id) {
       closeAllDropdowns();
       const f = state.files.find(x => x.id === id);
       openShareModal([id], f?.name || '');
-=======
-function handleAction(action, ids) {
-  switch (action) {
-    case 'delete':
-      closeAllDropdowns();
-      deleteFiles([ids]);
-      break;
-    case 'share':
-      closeAllDropdowns();
-      const f = state.files.find(x => x.id === numId);
-      openShareModal([ids], f?.name || '');
->>>>>>> 2db49c65bc38794c0b35b58634b6d8b7219e2a42
       break;
     case 'download':
       window.location.href= `/download?id=${id}`;
@@ -1055,11 +1028,7 @@ document.getElementById('fileTableBody').addEventListener('click', e => {
   const cb  = e.target.closest('input[type="checkbox"][data-id]');
   if (btn) handleAction(btn.dataset.action, btn.dataset.id);
   if (cb) {
-<<<<<<< HEAD
     const id = cb.dataset.id;
-=======
-    const id = Number(cb.dataset.id);
->>>>>>> 2db49c65bc38794c0b35b58634b6d8b7219e2a42
     cb.checked ? state.selected.add(id) : state.selected.delete(id);
     updateBulkButtons();
     render();
