@@ -2,7 +2,6 @@ package handler
 
 import (
 	"archive/zip"
-	"crypto/rand"
 	"database/sql"
 	"encoding/json"
 	"io"
@@ -18,22 +17,6 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 )
-
-const base62Chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-
-func generateShareToken() string {
-	token := make([]byte, 16)
-	_, err := rand.Read(token)
-	if err != nil {
-		log.Fatalf("ID 생성 실패: %v\n", err)
-	}
-	resTok := make([]byte, 0, 16)
-	for _, t := range token {
-
-		resTok = append(resTok, base62Chars[t%62])
-	}
-	return string(resTok)
-}
 
 func CreateShareLink(w http.ResponseWriter, r *http.Request) {
 
@@ -147,6 +130,8 @@ func getLinkFiles(token string, w http.ResponseWriter, r *http.Request) (files [
 
 func GetShareLink(w http.ResponseWriter, r *http.Request) {
 
+	http.ServeFile(w, r, "static/share.html")
+
 	var sharelink model.ShareLink
 
 	token := r.URL.Query().Get("token")
@@ -230,6 +215,29 @@ func GetShareLink(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		session := model.ShareSession{
+			ShareLinkToken: token,
+			Token:          generateID(),
+			ExpiresAt:      time.Now().Add(2 * time.Hour),
+		}
+
+		if sharelink.PasswordHash != "" {
+			_, err = db.DB.Exec("INSERT INTO share_sessions (ShareLinkToken, Token, ExpiresAt) VALUES (?, ?, ?) ", session.ShareLinkToken, session.Token, session.ExpiresAt.Format(time.RFC3339))
+			if err != nil {
+				//err
+				return
+			}
+		}
+
+		http.SetCookie(w, &http.Cookie{
+			Name:     "share_session",
+			Value:    session.Token,
+			Expires:  session.ExpiresAt,
+			HttpOnly: true,
+			Secure:   false,
+			Path:     "/",
+		})
+
 		data, err := json.Marshal(&files)
 		if err != nil {
 			log.Printf("JSON 직렬화 실패: %v", err)
@@ -248,16 +256,18 @@ func GetShareLink(w http.ResponseWriter, r *http.Request) {
 func DownloadShareFiles(w http.ResponseWriter, r *http.Request) {
 
 	var sharelink model.ShareLink
+	var shareSession model.ShareSession
 	var file model.File
 
-	token := r.URL.Query().Get("token")
-	if token == "" {
+	filetoken := r.URL.Query().Get("token")
+	if filetoken == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	var expiresAtStr string
-	err := db.DB.QueryRow("SELECT ExpiresAt From share_links WHERE Token = ?", token).Scan(&expiresAtStr)
+	var expiresAt_sharelink string
+	var hash string
+	err := db.DB.QueryRow("SELECT ExpiresAt, PasswordHash FROM share_links WHERE Token = ?", filetoken).Scan(&expiresAt_sharelink, &hash)
 
 	if err == sql.ErrNoRows {
 		http.Error(w, "not found", http.StatusNotFound)
@@ -269,11 +279,44 @@ func DownloadShareFiles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sharelink.ExpiresAt, _ = time.Parse(time.RFC3339, expiresAtStr)
+	sharelink.ExpiresAt, _ = time.Parse(time.RFC3339, expiresAt_sharelink)
 
 	if time.Now().After(sharelink.ExpiresAt) {
 		w.WriteHeader(http.StatusNotFound)
 		return
+	}
+
+	if hash != "" {
+		cookie, err := r.Cookie("share_session")
+		if err != nil {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		token := cookie.Value
+
+		var expiresAt_sharesession string
+		err = db.DB.QueryRow("SELECT ExpiresAt FROM share_sessions WHERE Token = ? AND ShareLinkToken = ?", token, filetoken).Scan(&expiresAt_sharesession)
+		if err != nil {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		shareSession.ExpiresAt, _ = time.Parse(time.RFC3339, expiresAt_sharesession)
+		if time.Now().After(shareSession.ExpiresAt) {
+			_, err = db.DB.Exec("DELETE FROM share_sessions WHERE Token = ?", token)
+			if err != nil {
+				http.Error(w, "failed to delete sharelinksession token", http.StatusInternalServerError)
+				return
+			}
+			http.SetCookie(w, &http.Cookie{
+				Name:    "share_session",
+				Value:   "",
+				Expires: time.Unix(0, 0),
+				Path:    "/",
+			})
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
 	}
 
 	getFileIDs := r.URL.Query()["ids"]
@@ -282,7 +325,7 @@ func DownloadShareFiles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := db.DB.Query("SELECT FileID FROM share_link_files WHERE Token = ?", token)
+	rows, err := db.DB.Query("SELECT FileID FROM share_link_files WHERE Token = ?", filetoken)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return

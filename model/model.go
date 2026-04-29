@@ -58,3 +58,9 @@ type Session struct {
 	ExpiresAt time.Time `json:"expires_at"`
 	CreatedAt time.Time `json:"created_at"`
 }
+
+type ShareSession struct {
+	ShareLinkToken string    `json:"share_link_token"`
+	Token          string    `json:"token"`
+	ExpiresAt      time.Time `json:"expires_at"`
+}

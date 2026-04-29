@@ -1,11 +1,8 @@
 package handler
 
 import (
-	"crypto/rand"
 	"database/sql"
 	"encoding/json"
-	"fmt"
-	"log"
 	"net/http"
 	"time"
 
@@ -14,15 +11,6 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 )
-
-func generateID() string {
-	b := make([]byte, 16)
-	_, err := rand.Read(b)
-	if err != nil {
-		log.Fatalf("ID 생성 실패: %v\n", err)
-	}
-	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
-}
 
 func Register(w http.ResponseWriter, r *http.Request) {
 
