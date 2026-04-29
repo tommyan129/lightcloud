@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"crypto/rand"
 	"fmt"
 	"lightcloud/db"
+	"log"
 	"net/http"
 	"time"
 )
@@ -26,4 +28,29 @@ func getSessionUser(r *http.Request) (string, error) {
 		return "", fmt.Errorf("session expired")
 	}
 	return userID, nil
+}
+
+func generateID() string {
+	b := make([]byte, 16)
+	_, err := rand.Read(b)
+	if err != nil {
+		log.Fatalf("ID 생성 실패: %v\n", err)
+	}
+	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
+}
+
+const base62Chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+
+func generateShareToken() string {
+	token := make([]byte, 16)
+	_, err := rand.Read(token)
+	if err != nil {
+		log.Fatalf("ID 생성 실패: %v\n", err)
+	}
+	resTok := make([]byte, 0, 16)
+	for _, t := range token {
+
+		resTok = append(resTok, base62Chars[t%62])
+	}
+	return string(resTok)
 }

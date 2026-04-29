@@ -439,7 +439,7 @@ func UpdateOwner(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = db.DB.QueryRow("SELECT Permission FROM file_permissions WHERE UserID = ?", nowUser).Scan(&p)
+	err = db.DB.QueryRow("SELECT Permission FROM file_permissions WHERE FileID = ? AND UserID = ?", req.FileID, nowUser).Scan(&p)
 	if err != nil {
 		http.Error(w, "failed to find data", http.StatusInternalServerError)
 		return

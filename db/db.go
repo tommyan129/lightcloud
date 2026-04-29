@@ -90,6 +90,13 @@ func DBInit() {
 	FOREIGN KEY (Token)  REFERENCES share_links(Token) ON DELETE CASCADE,
 	FOREIGN KEY (FileID) REFERENCES files(ID) ON DELETE CASCADE
 	)`,
+		`
+	CREATE TABLE IF NOT EXISTS share_sessions(
+	ShareLinkToken TEXT NOT NULL, -- share_links.Token 참조
+	Token TEXT PRIMARY KEY, -- 고유값
+	ExpiresAt TEXT NOT NULL,
+	FOREIGN KEY (ShareLinkToken) REFERENCES share_links(Token) ON DELETE CASCADE
+	)`,
 	}
 
 	for _, q := range createTableQueries {

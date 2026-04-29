@@ -1,6 +1,26 @@
 # TODO — 향후 작업
 
-## 중간발표 전
+## 중간발표 전 — 남은 우선순위
+
+### 1. cloud.html fetch 연결
+- [ ] `api.deleteFiles(ids)` — `POST /delete` body `{ids:[...]}` 연결 (L588 비어있음)
+- [ ] `api.updatePermission(fileId, permissions)` — `POST /perm` body `{file_id, permissions:[{user_id, permission}]}` 연결
+- [ ] `api.updateOwner(fileId, targetUser)` — `POST /owner` body `{file_id, targetuser}` 연결
+- [ ] perm modal UI — 유저 검색 input + 비트마스크 체크박스 (read/download/write/delete/manage)
+- [ ] owner modal UI — 유저 검색 input + 확인
+
+### 2. `/init` 초기 설정
+- [ ] `handler.Init` — GET: admin 없으면 init.html 서빙, 있으면 `/login` 리다이렉트 / POST: 서버 이름 + admin 계정 생성
+- [ ] `static/init.html` — "새로운 시작" 안내 문구, 서버 이름 + ID/비밀번호/재입력
+- [ ] `main.go` `/` 진입 시 admin 없으면 `/init` 리다이렉트
+- [ ] `settings` 테이블 추가 — `Key TEXT PK, Value TEXT` (서버 이름 저장)
+
+### 3. 파일 확장자 필터링
+- [ ] `UploadFiles`에서 `.exe .bat .sh .ps1 .cmd` 업로드 시 400 반환
+
+---
+
+## 중간발표 전 (완료)
 
 ### share.go 완성 (완료)
 - [x] `generateShareToken()` — base62 16자 토큰 생성
@@ -48,6 +68,40 @@
 - [ ] 개별 파일 다운로드
 - [ ] 공유 모달 초기화 — 새 링크 생성 시도 시 이전 링크 결과 초기화
 - [ ] 내가 생성한 공유 링크 목록 조회 기능
+- [ ] 검색창 상단 고정 — 파일 목록 스크롤해도 검색창 따라 내려오지 않도록
+- [ ] file filter chip — cloud.html의 chip 컴포넌트 그대로 이식
+- [ ] 파일 목록 영역 고정 높이 + 스크롤 — 파일 수 줄어도 목록 영역 크기 유지
+
+### cloud.html
+- [ ] 공유 모달 초기화 — 새 링크 생성 시 이전 링크 결과 초기화
+- [ ] 공유 모달 파일명 말줄임 — 일정 길이 초과 시 `...` 처리 (CSS `text-overflow: ellipsis`)
+
+### 비밀번호 찾기
+- [ ] `users` 테이블에 `RecoveryKeyHash TEXT`, `TempKeyHash TEXT` 컬럼 추가
+- [ ] 가입 완료 시 복구 키 생성 → 화면에 1회만 표시 ("지금 저장하지 않으면 다시 볼 수 없습니다")
+- [ ] `static/recovery.html` — 복구 키 입력 폼 + 하단 "키를 모르시나요?" 안내
+- [ ] `handler.Recovery` — 복구 키 bcrypt 검증 → 새 비밀번호 입력 화면으로
+- [ ] `handler.ResetPassword` — 새 비밀번호 받아서 hash 후 DB 업데이트
+- [ ] login.html에 "비밀번호를 잊으셨나요?" 링크 → `/recovery`
+- [ ] 어드민 패널에서 1회 한정 임시 키 발급 — 발급 즉시 `TempKeyHash` 저장, 사용 후 NULL로 초기화
+- [ ] admin 복구는 assiadmin이 임시 키 발급, 일반 유저 복구는 admin이 발급
+
+### 초기 설정 (`/init`)
+- [ ] `handler.Init` — DB에 admin 없을 때만 접근 허용, 있으면 `/login` 리다이렉트
+- [ ] `static/init.html` — 서버 이름 + admin ID/비밀번호/재입력 입력 폼
+- [ ] 안내 문구: "새로운 시작 / 관리자 계정을 설정하고 나만의 클라우드를 시작하세요. 한 번만 나타나는 화면입니다."
+- [ ] 서버 이름 DB 저장 — `settings` 테이블 (`Key TEXT PK`, `Value TEXT`)
+- [ ] `/` 진입 시 admin 없으면 `/init`으로 리다이렉트
+
+### 어드민 UI (`static/admin.html`)
+- [ ] 로그인 후 Role 확인 — admin/assiadmin이면 `/admin`으로 유도
+- [ ] 사용자 관리 — 목록, 역할 변경, 정지/해제, 삭제
+- [ ] 파일 관리 — 전체 파일 목록(소유자 포함), 강제 삭제, 권한 수정
+- [ ] 공유 링크 관리 — 전체 목록(생성자/만료일), 강제 만료
+- [ ] 대시보드 — 사용자 수/파일 수/총 용량 요약
+- [ ] 설정 — 서버 이름 변경, 최대 업로드 크기, 차단 확장자 목록 관리
+- [ ] 사용자별 스토리지 쿼터 설정
+- [ ] 활성 세션 목록 + 강제 로그아웃
 
 ### 백엔드 미완성
 - [x] `DeleteFiles` 핸들러 — 권한 체크, 디스크+DB 삭제
