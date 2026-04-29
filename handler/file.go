@@ -26,19 +26,12 @@ func ListFiles(w http.ResponseWriter, r *http.Request) {
 		Mine:   []model.File{},
 		Shared: []model.File{},
 	}
-	response := model.FileListResponse{
-		Mine:   []model.File{},
-		Shared: []model.File{},
-	}
 
-	nowUser, err := getSessionUser(r)
 	nowUser, err := getSessionUser(r)
 	if err != nil {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-
-	rows, err := db.DB.Query("SELECT ID, OriginalName, Size, MimeType, CreatedAt FROM files WHERE OwnerID = ?", nowUser)
 
 	rows, err := db.DB.Query("SELECT ID, OriginalName, Size, MimeType, CreatedAt FROM files WHERE OwnerID = ?", nowUser)
 	if err != nil {
@@ -67,7 +60,6 @@ func ListFiles(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-
 	for rows.Next() {
 		var f model.File
 		err = rows.Scan(&f.ID, &f.OriginalName, &f.Size, &f.MimeType, &f.CreatedAt)
@@ -76,33 +68,10 @@ func ListFiles(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "db error", http.StatusInternalServerError)
 			return
 		}
-		response.Mine = append(response.Mine, f)
-	}
-	rows.Close()
-
-	rows, err = db.DB.Query("SELECT f.ID, f.OriginalName, f.Size, f.MimeType, f.CreatedAt From files f JOIN file_permissions fp ON f.ID = fp.FileID WHERE fp.UserID = ? AND f.OwnerID != ?", nowUser, nowUser)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var f model.File
-		err = rows.Scan(&f.ID, &f.OriginalName, &f.Size, &f.MimeType, &f.CreatedAt)
-		err = rows.Scan(&f.ID, &f.OriginalName, &f.Size, &f.MimeType, &f.CreatedAt)
-		if err != nil {
-			log.Printf("파일 행 읽기 실패: %v", err)
-			http.Error(w, "db error", http.StatusInternalServerError)
-			return
-		}
-		response.Shared = append(response.Shared, f)
 		response.Shared = append(response.Shared, f)
 	}
 	rows.Close()
-	rows.Close()
 
-	data, err := json.Marshal(&response)
 	data, err := json.Marshal(&response)
 	if err != nil {
 		log.Printf("JSON 직렬화 실패: %v", err)
@@ -119,14 +88,10 @@ func UploadFiles(w http.ResponseWriter, r *http.Request) {
 	var adminID string
 
 	nowUser, err := getSessionUser(r)
-	nowUser, err := getSessionUser(r)
 	if err != nil {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-
-	if err = r.ParseMultipartForm(32 << 20); err != nil {
-		http.Error(w, "invalid multipart form", http.StatusBadRequest)
 
 	if err = r.ParseMultipartForm(32 << 20); err != nil {
 		http.Error(w, "invalid multipart form", http.StatusBadRequest)
@@ -147,7 +112,6 @@ func UploadFiles(w http.ResponseWriter, r *http.Request) {
 			OriginalName: fileHeader.Filename,
 			Size:         fileHeader.Size,
 			MimeType:     fileHeader.Header.Get("Content-Type"),
-			CreatedAt:    time.Now().Format(time.RFC3339),
 			CreatedAt:    time.Now().Format(time.RFC3339),
 		}
 
@@ -210,7 +174,6 @@ func UploadFiles(w http.ResponseWriter, r *http.Request) {
 		savedFile.Close()
 
 		_, err = db.DB.Exec("INSERT INTO files (ID, OwnerID, OriginalName, StoredName, Size, MimeType, CreatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)", newFile.ID, newFile.OwnerID, newFile.OriginalName, newFile.StoredName, newFile.Size, newFile.MimeType, newFile.CreatedAt)
-		_, err = db.DB.Exec("INSERT INTO files (ID, OwnerID, OriginalName, StoredName, Size, MimeType, CreatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)", newFile.ID, newFile.OwnerID, newFile.OriginalName, newFile.StoredName, newFile.Size, newFile.MimeType, newFile.CreatedAt)
 		if err != nil {
 			log.Printf("files INSERT 실패 [%s]: %v", newFile.ID, err)
 			http.Error(w, "db error", http.StatusInternalServerError)
@@ -244,15 +207,12 @@ func UploadFiles(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(`{"ok":true}`))
-	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(`{"ok":true}`))
 }
 
 func DownloadFiles(w http.ResponseWriter, r *http.Request) {
 	var file model.File
 	var p int //perm 받는 임시 함수
 
-	nowUser, err := getSessionUser(r)
 	nowUser, err := getSessionUser(r)
 	if err != nil {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)

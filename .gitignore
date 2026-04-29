@@ -1,8 +1,8 @@
 uploads/
 *.sqlite
 *.db
+*.log
 go.sum
-dblog.log
 CLAUDE.md
 GEMINI.md
 .claude/
