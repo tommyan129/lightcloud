@@ -141,7 +141,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		Value:    token,
 		Expires:  session.ExpiresAt,
 		HttpOnly: true,
-		Secure:   true,
+		Secure:   false, // TODO: 배포 시 true로 변경 (HTTPS 필요)
 		Path:     "/",
 	})
 

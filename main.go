@@ -23,6 +23,7 @@ func main() {
 	http.HandleFunc("/share", handler.GetShareLink)
 	http.HandleFunc("/share/create", handler.CreateShareLink)
 	http.HandleFunc("/share/download", handler.DownloadShareFiles)
+	http.HandleFunc("/delete", handler.DeleteFiles)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/login", http.StatusFound)

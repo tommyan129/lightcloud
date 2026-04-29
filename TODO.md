@@ -16,30 +16,44 @@
 - [x] `/upload` → `handler.UploadFiles`
 - [x] `/download` → `handler.DownloadFiles`
 
-### ListFiles 수정
-- [ ] 현재: `OwnerID = nowUser`인 파일만 반환
-- [ ] 변경: `{"mine": [...], "shared": [...]}` 두 목록 분리 반환
-- [ ] `mine` 쿼리: `SELECT ... FROM files WHERE OwnerID = ?`
-- [ ] `shared` 쿼리: `SELECT f.* FROM files f JOIN file_permissions fp ON f.ID = fp.FileID WHERE fp.UserID = ? AND f.OwnerID != ?`
-- [ ] `model.go`에 응답용 구조체 추가 (`Mine []File`, `Shared []File`)
-- [ ] UI: 같은 페이지에 섹션 분리 (탭 또는 구역) — 이름 중복 시 구역 자체가 mine/shared 구분해줌
+### ListFiles 수정 (완료)
+- [x] `{"mine": [...], "shared": [...]}` 두 목록 분리 반환
+- [x] `model.go`에 응답용 구조체 추가 (`Mine []File`, `Shared []File`)
+- [ ] UI: mine/shared 섹션 분리 표시
 
-### /main UI (`static/main.html`)
-- [ ] 내 파일 목록 테이블 (이름, 크기, 업로드 날짜, 체크박스)
-- [ ] 공유받은 파일 목록 테이블 (동일 구조, 섹션 분리)
-- [ ] 파일 업로드 (다수 선택 가능)
-- [ ] 선택 파일 다운로드
+### cloud.html 백엔드 연결
+- [x] 폴더 사이드바 하드코딩 항목 제거 (f1~f4)
+- [x] `api.getFiles()` — GET /files fetch 구현
+- [x] `api.uploadFiles()` — POST /upload fetch 구현
+- [x] `btnConfirmUpload` 핸들러 — MOCK_FILES 제거, loadFiles() 호출
+- [x] 다운로드 버튼 — data-action, data-id 추가 (list + grid)
+- [x] `handleAction 'download'` case 추가
+- [x] `loadFiles()` — countAll 업데이트 추가
+- [x] `api.createShareLink()` — POST /share fetch 구현
+- [x] 필드 매핑 버그 수정 (`uploadedTime` → `uploaded`, size formatBytes 적용)
+- [x] checkbox 개별 선택 버그 수정 — `Number(id)` → string ID로 통일
+- [x] 일괄 다운로드 버튼 버그 수정 — Number() 제거로 같이 해결
+- [x] file size 단위 변환 — `formatBytes()` 적용, `sizeNum` 정렬용 필드 분리
+- [x] 업로드 중복 방지 — 버튼 클릭 시 modal 즉시 닫고 fetch 시작
+- [ ] `api.deleteFiles()` — 백엔드 완성, 프론트 연결 필요
+- [ ] `api.updatePermission()` — 백엔드 완성, 프론트 연결 필요
+- [ ] `api.updateOwner()` — 백엔드 완성, 프론트 연결 필요
+- [ ] perm modal UI — 유저 검색(combobox), 다중 선택, 권한 부여 연결
+- [ ] owner modal UI — 유저 검색, 선택, 확인 연결
 
 ### /share UI (`static/share.html`)
 - [ ] token으로 공유 파일 목록 표시
 - [ ] 비밀번호 있는 링크면 입력 폼 먼저
 - [ ] 공유 링크 생성 + QR 코드 표시 (qrcode.js 로컬)
 - [ ] 개별 파일 다운로드
+- [ ] 공유 모달 초기화 — 새 링크 생성 시도 시 이전 링크 결과 초기화
+- [ ] 내가 생성한 공유 링크 목록 조회 기능
 
-### 1. 파일 확장자 필터링
-- 업로드 시 `.exe`, `.bat`, `.sh`, `.ps1` 등 위험 확장자 차단
-- `filepath.Ext()`로 확장자 추출 후 금지 목록과 비교
-- 차단 시 400 또는 415 응답
+### 백엔드 미완성
+- [x] `DeleteFiles` 핸들러 — 권한 체크, 디스크+DB 삭제
+- [x] `UpdatePerm` 핸들러 — PermManage 확인, UPSERT
+- [x] `UpdateOwner` 핸들러 — 소유자 변경, 권한 재조정, admin 분기
+- [ ] 파일 확장자 필터링 — `.exe`, `.bat`, `.sh`, `.ps1` 업로드 차단
 
 ---
 

@@ -5,3 +5,7 @@ go.sum
 dblog.log
 CLAUDE.md
 GEMINI.md
+.claude/
+main.html
+mainv2.html
+log/

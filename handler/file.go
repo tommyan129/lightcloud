@@ -22,48 +22,57 @@ const uploadFilesPath = "./upload"
 
 func ListFiles(w http.ResponseWriter, r *http.Request) {
 
-	var nowUser string
-	var session model.Session
-	var files []model.File
+	response := model.FileListResponse{
+		Mine:   []model.File{},
+		Shared: []model.File{},
+	}
 
-	cookie, err := r.Cookie("session")
+	nowUser, err := getSessionUser(r)
 	if err != nil {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	token := cookie.Value
 
-	err = db.DB.QueryRow("SELECT UserID, ExpiresAt FROM sessions WHERE Token = ?", token).Scan(&nowUser, &session.ExpiresAt)
-
-	if err == sql.ErrNoRows {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	if time.Now().After(session.ExpiresAt) {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	rows, err := db.DB.Query("SELECT ID, OriginalName, Size FROM files WHERE OwnerID = ?", nowUser)
+	rows, err := db.DB.Query("SELECT ID, OriginalName, Size, MimeType, CreatedAt FROM files WHERE OwnerID = ?", nowUser)
 	if err != nil {
 		log.Printf("파일 목록 조회 실패: %v", err)
 		http.Error(w, "db error", http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
+
 	for rows.Next() {
 		var f model.File
-		err = rows.Scan(&f.ID, &f.OriginalName, &f.Size)
+		err = rows.Scan(&f.ID, &f.OriginalName, &f.Size, &f.MimeType, &f.CreatedAt)
 		if err != nil {
 			log.Printf("파일 행 읽기 실패: %v", err)
 			http.Error(w, "db error", http.StatusInternalServerError)
 			return
 		}
-		files = append(files, f)
+		response.Mine = append(response.Mine, f)
 	}
+	rows.Close()
 
-	data, err := json.Marshal(&files)
+	rows, err = db.DB.Query("SELECT f.ID, f.OriginalName, f.Size, f.MimeType, f.CreatedAt From files f JOIN file_permissions fp ON f.ID = fp.FileID WHERE fp.UserID = ? AND f.OwnerID != ?", nowUser, nowUser)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var f model.File
+		err = rows.Scan(&f.ID, &f.OriginalName, &f.Size, &f.MimeType, &f.CreatedAt)
+		if err != nil {
+			log.Printf("파일 행 읽기 실패: %v", err)
+			http.Error(w, "db error", http.StatusInternalServerError)
+			return
+		}
+		response.Shared = append(response.Shared, f)
+	}
+	rows.Close()
+
+	data, err := json.Marshal(&response)
 	if err != nil {
 		log.Printf("JSON 직렬화 실패: %v", err)
 		http.Error(w, "json encode failed", http.StatusInternalServerError)
@@ -76,30 +85,18 @@ func ListFiles(w http.ResponseWriter, r *http.Request) {
 
 func UploadFiles(w http.ResponseWriter, r *http.Request) {
 
-	var nowUser string
-	var expiresAt time.Time
 	var adminID string
 
-	cookie, err := r.Cookie("session")
+	nowUser, err := getSessionUser(r)
 	if err != nil {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	token := cookie.Value
 
-	err = db.DB.QueryRow("SELECT UserID, ExpiresAt FROM sessions WHERE Token = ?", token).Scan(&nowUser, &expiresAt)
-
-	if err == sql.ErrNoRows {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
+	if err = r.ParseMultipartForm(32 << 20); err != nil {
+		http.Error(w, "invalid multipart form", http.StatusBadRequest)
 		return
 	}
-
-	if time.Now().After(expiresAt) {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	r.ParseMultipartForm(32 << 20)
 
 	fileHeaders := r.MultipartForm.File["file"]
 	for _, fileHeader := range fileHeaders {
@@ -115,7 +112,7 @@ func UploadFiles(w http.ResponseWriter, r *http.Request) {
 			OriginalName: fileHeader.Filename,
 			Size:         fileHeader.Size,
 			MimeType:     fileHeader.Header.Get("Content-Type"),
-			CreatedAt:    time.Now(),
+			CreatedAt:    time.Now().Format(time.RFC3339),
 		}
 
 		ownerPerm := model.FilePermission{
@@ -176,7 +173,7 @@ func UploadFiles(w http.ResponseWriter, r *http.Request) {
 		file.Close()
 		savedFile.Close()
 
-		_, err = db.DB.Exec("INSERT INTO files (ID, OwnerID, OriginalName, StoredName, Size, MimeType, CreatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)", newFile.ID, newFile.OwnerID, newFile.OriginalName, newFile.StoredName, newFile.Size, newFile.MimeType, newFile.CreatedAt.Format(time.RFC3339))
+		_, err = db.DB.Exec("INSERT INTO files (ID, OwnerID, OriginalName, StoredName, Size, MimeType, CreatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)", newFile.ID, newFile.OwnerID, newFile.OriginalName, newFile.StoredName, newFile.Size, newFile.MimeType, newFile.CreatedAt)
 		if err != nil {
 			log.Printf("files INSERT 실패 [%s]: %v", newFile.ID, err)
 			http.Error(w, "db error", http.StatusInternalServerError)
@@ -208,29 +205,16 @@ func UploadFiles(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"ok":true}`))
 }
 
 func DownloadFiles(w http.ResponseWriter, r *http.Request) {
-	var nowUser string
-	var expiresAt time.Time
 	var file model.File
 	var p int //perm 받는 임시 함수
 
-	cookie, err := r.Cookie("session")
+	nowUser, err := getSessionUser(r)
 	if err != nil {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
-		return
-	}
-	token := cookie.Value
-
-	err = db.DB.QueryRow("SELECT UserID, ExpiresAt FROM sessions WHERE Token = ?", token).Scan(&nowUser, &expiresAt)
-
-	if err == sql.ErrNoRows {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	if time.Now().After(expiresAt) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -333,6 +317,165 @@ func DownloadFiles(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func MainPage(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "static/main.html")
+func DeleteFiles(w http.ResponseWriter, r *http.Request) {
+
+	var req struct {
+		IDs []string `json:"ids"`
+	}
+	var delFiles []model.File
+	var p int
+
+	nowUser, err := getSessionUser(r)
+	if err != nil {
+		http.Error(w, "failed getsession", http.StatusInternalServerError)
+		return
+	}
+
+	err = json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, "failed decode json", http.StatusInternalServerError)
+		return
+	}
+
+	for _, id := range req.IDs {
+		var f model.File
+		f.ID = id
+		err = db.DB.QueryRow("SELECT OwnerID, StoredName FROM files WHERE ID = ?", id).Scan(&f.OwnerID, &f.StoredName)
+		if err != nil {
+			http.Error(w, "failed to find data", http.StatusInternalServerError)
+			return
+		}
+
+		err = db.DB.QueryRow("SELECT Permission FROM file_permissions WHERE FileID = ? AND UserID = ?", id, nowUser).Scan(&p)
+		if err != nil {
+			http.Error(w, "failed to find data", http.StatusInternalServerError)
+			return
+		}
+
+		if (p & model.PermDelete) == 0 {
+			log.Printf("삭제 권한 없음 [%s]: skip", id)
+			continue
+		}
+		delFiles = append(delFiles, f)
+	}
+
+	for _, del := range delFiles {
+		err = os.Remove(filepath.Join(uploadFilesPath, del.StoredName))
+		if err != nil {
+			http.Error(w, "파일 삭제 실패", http.StatusInternalServerError)
+			return
+		}
+		_, err = db.DB.Exec("DELETE FROM files WHERE ID = ?", del.ID)
+		if err != nil {
+			log.Printf("파일 DB 삭제 실패 [%s]: %v", del.ID, err)
+			http.Error(w, "db error", http.StatusInternalServerError)
+			return
+		}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"ok":true}`))
+}
+
+func UpdatePerm(w http.ResponseWriter, r *http.Request) {
+	var p int
+
+	nowUser, err := getSessionUser(r)
+	if err != nil {
+		http.Error(w, "failed getsession", http.StatusInternalServerError)
+		return
+	}
+	var req struct {
+		FileID      string `json:"file_id"`
+		Permissions []struct {
+			UserID     string `json:"user_id"`
+			Permission int    `json:"permission"`
+		} `json:"permissions"`
+	}
+	err = json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, "failed decode json", http.StatusInternalServerError)
+		return
+	}
+
+	err = db.DB.QueryRow("SELECT permission FROM file_permissions WHERE FileID =? AND UserID = ?", req.FileID, nowUser).Scan(&p)
+	if err != nil {
+		http.Error(w, "failed to find data", http.StatusInternalServerError)
+		return
+	}
+
+	if (p & model.PermManage) == 0 {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+
+	for _, perm := range req.Permissions {
+		_, err = db.DB.Exec("INSERT INTO file_permissions (FileID, UserID, Permission) VALUES (?, ?, ?) ON CONFLICT (FileID, UserID) DO UPDATE SET Permission = excluded.Permission", req.FileID, perm.UserID, perm.Permission)
+		if err != nil {
+			http.Error(w, "failed to update perm", http.StatusInternalServerError)
+			return
+		}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"ok":true}`))
+}
+
+func UpdateOwner(w http.ResponseWriter, r *http.Request) {
+
+	var req struct {
+		FileID     string `json:"file_id"`
+		TargetUser string `json:"targetuser"`
+	}
+	var p int
+	var ro string
+
+	nowUser, err := getSessionUser(r)
+	if err != nil {
+		http.Error(w, "failed getsession", http.StatusInternalServerError)
+		return
+	}
+	err = json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, "failed decode json", http.StatusInternalServerError)
+		return
+	}
+
+	err = db.DB.QueryRow("SELECT Permission FROM file_permissions WHERE UserID = ?", nowUser).Scan(&p)
+	if err != nil {
+		http.Error(w, "failed to find data", http.StatusInternalServerError)
+		return
+	}
+
+	if (p & model.PermManage) == 0 {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+
+	_, err = db.DB.Exec("UPDATE files SET OwnerID = ? WHERE ID = ?", req.TargetUser, req.FileID)
+	if err != nil {
+		//err
+		return
+	}
+	_, err = db.DB.Exec("INSERT INTO file_permissions (FileID, UserID, Permission) VALUES (?, ?, ?) ON CONFLICT (FileID, UserID) DO UPDATE SET Permission = excluded.Permission", req.FileID, req.TargetUser, model.PermRead|model.PermDownload|model.PermWrite|model.PermDelete|
+		model.PermManage)
+	if err != nil {
+		http.Error(w, "failed to update perm", http.StatusInternalServerError)
+		return
+	}
+
+	err = db.DB.QueryRow("SELECT role FROM users WHERE ID = ?", nowUser).Scan(&ro)
+	if err != nil {
+		http.Error(w, "failed to find data", http.StatusInternalServerError)
+		return
+	}
+
+	if ro != "admin" && ro != "assiadmin" {
+		_, err = db.DB.Exec("INSERT INTO file_permissions (FileID, UserID, Permission) VALUES (?, ?, ?) ON CONFLICT (FileID, UserID) DO UPDATE SET Permission = excluded.Permission", req.FileID, nowUser, model.PermRead|model.PermDownload)
+		if err != nil {
+			http.Error(w, "failed to update perm", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"ok":true}`))
 }
