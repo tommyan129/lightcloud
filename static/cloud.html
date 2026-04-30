@@ -42,21 +42,35 @@
       </a>
     </nav>
 
-    <div class="nav-label">관리</div>
-    <nav>
-      <a href="#" class="nav-link" id="btnNavShareLinks">
-        <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><circle cx="15" cy="5" r="2.5" stroke="currentColor" stroke-width="1.5"/><circle cx="5" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/><circle cx="15" cy="15" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M7.3 9l5-2.5M7.3 11l5 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        공유 링크
-      </a>
-      <a href="#" class="nav-link" id="btnNavGrantedPerms">
-        <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><rect x="4" y="9" width="12" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M7 9V7a3 3 0 1 1 6 0v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        권한 목록
-      </a>
-    </nav>
-
-    <div class="storage">
-      <div>48.2 GB / 100 GB</div>
-      <div class="storage-bar"><div class="storage-fill"></div></div>
+    <div class="sidebar-footer">
+      <div class="storage">
+        <div>48.2 GB / 100 GB</div>
+        <div class="storage-bar"><div class="storage-fill"></div></div>
+      </div>
+      <div class="sidebar-user-wrap">
+        <div class="user-dropdown-menu" id="userDropdown" data-hidden>
+          <button id="btnMenuShareLinks">
+            <svg width="13" height="13" viewBox="0 0 20 20" fill="none"><circle cx="15" cy="5" r="2.5" stroke="currentColor" stroke-width="1.5"/><circle cx="5" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/><circle cx="15" cy="15" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M7.3 9l5-2.5M7.3 11l5 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            공유 링크
+          </button>
+          <button id="btnMenuGrantedPerms">
+            <svg width="13" height="13" viewBox="0 0 20 20" fill="none"><rect x="4" y="9" width="12" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M7 9V7a3 3 0 1 1 6 0v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            권한 목록
+          </button>
+          <div class="divider"></div>
+          <button class="danger" id="btnLogout">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M5 2H2v10h3M9 4l3 3-3 3M12 7H5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            로그아웃
+          </button>
+        </div>
+        <button class="user-menu-btn" id="btnUserMenu">
+          <div class="user-avatar">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3.5" stroke="currentColor" stroke-width="1.5"/><path d="M2 18c0-4.4 3.6-7 8-7s8 2.6 8 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <span class="user-menu-label">내 계정</span>
+          <svg id="userMenuChevron" width="11" height="11" viewBox="0 0 12 12" fill="none" style="transition:transform .15s ease"><path d="M2 8L6 4L10 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+      </div>
     </div>
   </aside>
 
@@ -1095,10 +1109,29 @@ document.getElementById('btnTheme').addEventListener('click', () => {
 });
 
 /* ═══════════════════════════════════════════
-   SHARE LINKS / GRANTED PERMS
+   USER MENU
 ═══════════════════════════════════════════ */
-document.getElementById('btnNavShareLinks').addEventListener('click', async e => {
-  e.preventDefault();
+const userDropdown = document.getElementById('userDropdown');
+const userMenuChevron = document.getElementById('userMenuChevron');
+
+function closeUserMenu() {
+  userDropdown.setAttribute('data-hidden', '');
+  userMenuChevron.style.transform = '';
+}
+
+document.getElementById('btnUserMenu').addEventListener('click', e => {
+  e.stopPropagation();
+  if (userDropdown.hasAttribute('data-hidden')) {
+    userDropdown.removeAttribute('data-hidden');
+    userMenuChevron.style.transform = 'rotate(180deg)';
+  } else {
+    closeUserMenu();
+  }
+});
+
+document.addEventListener('click', () => closeUserMenu());
+
+document.getElementById('btnMenuShareLinks').addEventListener('click', async () => {
   try {
     const items = await api.getMyShareLinks();
     renderShareLinksList(items);
@@ -1108,8 +1141,7 @@ document.getElementById('btnNavShareLinks').addEventListener('click', async e =>
   }
 });
 
-document.getElementById('btnNavGrantedPerms').addEventListener('click', async e => {
-  e.preventDefault();
+document.getElementById('btnMenuGrantedPerms').addEventListener('click', async () => {
   try {
     const items = await api.getGrantedPerms();
     renderGrantedPerms(items);
@@ -1117,6 +1149,11 @@ document.getElementById('btnNavGrantedPerms').addEventListener('click', async e 
   } catch(err) {
     alert('권한 목록 로드 실패: ' + err.message);
   }
+});
+
+document.getElementById('btnLogout').addEventListener('click', async () => {
+  try { await fetch('/logout', {method: 'POST', credentials: 'include'}); } catch(_) {}
+  window.location.href = '/login';
 });
 
 document.getElementById('shareLinksBody').addEventListener('click', e => {
@@ -1132,5 +1169,12 @@ document.getElementById('shareLinksBody').addEventListener('click', e => {
 /* ═══════════════════════════════════════════
    INIT
 ═══════════════════════════════════════════ */
+if (window.innerWidth <= 640) {
+  state.view = 'grid';
+  document.getElementById('listView').setAttribute('data-hidden', '');
+  document.getElementById('gridView').removeAttribute('data-hidden');
+  document.getElementById('btnGrid').classList.add('active');
+  document.getElementById('btnList').classList.remove('active');
+}
 loadFiles();
 </script>
