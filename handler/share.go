@@ -18,6 +18,52 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+func GetMyShareLinks(w http.ResponseWriter, r *http.Request) {
+	nowUser, err := getSessionUser(r)
+	if err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	type ShareLinkItem struct {
+		Token       string `json:"token"`
+		Title       string `json:"share_title"`
+		CreatedAt   string `json:"created_at"`
+		ExpiresAt   string `json:"expires_at"`
+		HasPassword bool   `json:"has_password"`
+		FileCount   int    `json:"file_count"`
+	}
+
+	rows, err := db.DB.Query(`
+		SELECT sl.Token, sl.Title, sl.CreatedAt, sl.ExpiresAt,
+		CASE WHEN sl.PasswordHash != '' AND sl.PasswordHash IS NOT NULL THEN 1 ELSE 0 END,
+		COUNT(slf.FileID)
+		FROM share_links sl
+		LEFT JOIN share_link_files slf ON sl.Token = slf.Token
+		WHERE sl.CreatedBy = ?
+		GROUP BY sl.Token
+		ORDER BY sl.CreatedAt DESC`, nowUser)
+	if err != nil {
+		http.Error(w, "db error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var items []ShareLinkItem
+	for rows.Next() {
+		var item ShareLinkItem
+		var hasPw int
+		rows.Scan(&item.Token, &item.Title, &item.CreatedAt, &item.ExpiresAt, &hasPw, &item.FileCount)
+		item.HasPassword = hasPw == 1
+		items = append(items, item)
+	}
+	if items == nil {
+		items = []ShareLinkItem{}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(items)
+}
+
 func CreateShareLink(w http.ResponseWriter, r *http.Request) {
 
 	nowUser, err := getSessionUser(r)
@@ -30,6 +76,7 @@ func CreateShareLink(w http.ResponseWriter, r *http.Request) {
 		FileIDs      []string `json:"file_ids"`
 		ExpiresHours int      `json:"expires_hours"`
 		Password     string   `json:"password"`
+		Title        string   `json:"share_title"`
 	}
 
 	err = json.NewDecoder(r.Body).Decode(&req)
@@ -58,6 +105,7 @@ func CreateShareLink(w http.ResponseWriter, r *http.Request) {
 
 	sharelink := model.ShareLink{
 		Token:        generateShareToken(),
+		ShareTitle:   req.Title,
 		CreatedBy:    nowUser,
 		CreatedAt:    time.Now(),
 		ExpiresAt:    time.Now().Add(time.Duration(req.ExpiresHours) * time.Hour),
@@ -66,11 +114,11 @@ func CreateShareLink(w http.ResponseWriter, r *http.Request) {
 
 	tx, err := db.DB.Begin()
 	if err != nil {
-		//err
+		http.Error(w, "failed to start tx", http.StatusInternalServerError)
 		return
 	}
 
-	_, err = tx.Exec("INSERT INTO share_links (Token, CreatedAt, CreatedBy, ExpiresAt, PasswordHash) VALUES (?, ?, ?, ?, ?)", sharelink.Token, sharelink.CreatedAt.Format(time.RFC3339), sharelink.CreatedBy, sharelink.ExpiresAt.Format(time.RFC3339), sharelink.PasswordHash)
+	_, err = tx.Exec("INSERT INTO share_links (Token, Title, CreatedAt, CreatedBy, ExpiresAt, PasswordHash) VALUES (?, ?, ?, ?, ?, ?)", sharelink.Token, sharelink.ShareTitle, sharelink.CreatedAt.Format(time.RFC3339), sharelink.CreatedBy, sharelink.ExpiresAt.Format(time.RFC3339), sharelink.PasswordHash)
 	if err != nil {
 		tx.Rollback()
 		w.WriteHeader(http.StatusInternalServerError)
@@ -107,8 +155,8 @@ func CreateShareLink(w http.ResponseWriter, r *http.Request) {
 	}{sharelink.Token})
 }
 
-func getLinkFiles(token string, w http.ResponseWriter, r *http.Request) (files []model.File, err error) {
-	rows, err := db.DB.Query("SELECT f.ID, f.OriginalName, f.Size, f.MimeType  FROM files f JOIN share_link_files s ON f.ID = s.FileID WHERE s.Token = ?", token)
+func getLinkFiles(token string, w http.ResponseWriter) (files []model.File, err error) {
+	rows, err := db.DB.Query("SELECT f.ID, f.OriginalName, f.Size, f.MimeType, f.UploadedAt  FROM files f JOIN share_link_files s ON f.ID = s.FileID WHERE s.Token = ?", token)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -117,7 +165,7 @@ func getLinkFiles(token string, w http.ResponseWriter, r *http.Request) (files [
 
 	for rows.Next() {
 		var f model.File
-		err = rows.Scan(&f.ID, &f.OriginalName, &f.Size, &f.MimeType)
+		err = rows.Scan(&f.ID, &f.OriginalName, &f.Size, &f.MimeType, &f.UploadedAt)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -128,9 +176,7 @@ func getLinkFiles(token string, w http.ResponseWriter, r *http.Request) (files [
 	return files, err
 }
 
-func GetShareLink(w http.ResponseWriter, r *http.Request) {
-
-	http.ServeFile(w, r, "static/share.html")
+func ShareInfo(w http.ResponseWriter, r *http.Request) {
 
 	var sharelink model.ShareLink
 
@@ -141,7 +187,7 @@ func GetShareLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var expiresAtStr string
-	err := db.DB.QueryRow("SELECT ExpiresAt, PasswordHash From share_links WHERE Token = ?", token).Scan(&expiresAtStr, &sharelink.PasswordHash)
+	err := db.DB.QueryRow("SELECT ExpiresAt, PasswordHash, CreatedBy, Title FROM share_links WHERE Token = ?", token).Scan(&expiresAtStr, &sharelink.PasswordHash, &sharelink.CreatedBy, &sharelink.ShareTitle)
 
 	if err == sql.ErrNoRows {
 		http.Error(w, "not found", http.StatusNotFound)
@@ -155,7 +201,7 @@ func GetShareLink(w http.ResponseWriter, r *http.Request) {
 
 	sharelink.ExpiresAt, _ = time.Parse(time.RFC3339, expiresAtStr)
 	if time.Now().After(sharelink.ExpiresAt) {
-		w.WriteHeader(http.StatusNotFound)
+		w.WriteHeader(http.StatusGone)
 		return
 	}
 
@@ -168,16 +214,27 @@ func GetShareLink(w http.ResponseWriter, r *http.Request) {
 				RequirePassword bool `json:"requires_password"`
 			}{true})
 			return
-		}
-		if sharelink.PasswordHash == "" {
+		} else {
 
-			files, err := getLinkFiles(token, w, r)
+			files, err := getLinkFiles(token, w)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
+			var resp struct {
+				Title     string       `json:"title"`
+				ExpiresAt string       `json:"expires_at"`
+				CreatedBy string       `json:"created_by"`
+				Files     []model.File `json:"files"`
+			}
+			var un string
+			err = db.DB.QueryRow("SELECT Username FROM users WHERE ID = ?", sharelink.CreatedBy).Scan(&un)
+			resp.Title = sharelink.ShareTitle
+			resp.ExpiresAt = expiresAtStr
+			resp.CreatedBy = un
+			resp.Files = files
 
-			data, err := json.Marshal(&files)
+			data, err := json.Marshal(&resp)
 			if err != nil {
 				log.Printf("JSON 직렬화 실패: %v", err)
 				http.Error(w, "json encode failed", http.StatusInternalServerError)
@@ -209,7 +266,7 @@ func GetShareLink(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		files, err := getLinkFiles(token, w, r)
+		files, err := getLinkFiles(token, w)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -221,12 +278,10 @@ func GetShareLink(w http.ResponseWriter, r *http.Request) {
 			ExpiresAt:      time.Now().Add(2 * time.Hour),
 		}
 
-		if sharelink.PasswordHash != "" {
-			_, err = db.DB.Exec("INSERT INTO share_sessions (ShareLinkToken, Token, ExpiresAt) VALUES (?, ?, ?) ", session.ShareLinkToken, session.Token, session.ExpiresAt.Format(time.RFC3339))
-			if err != nil {
-				//err
-				return
-			}
+		_, err = db.DB.Exec("INSERT INTO share_sessions (ShareLinkToken, Token, ExpiresAt) VALUES (?, ?, ?) ", session.ShareLinkToken, session.Token, session.ExpiresAt.Format(time.RFC3339))
+		if err != nil {
+			//err
+			return
 		}
 
 		http.SetCookie(w, &http.Cookie{
@@ -238,7 +293,21 @@ func GetShareLink(w http.ResponseWriter, r *http.Request) {
 			Path:     "/",
 		})
 
-		data, err := json.Marshal(&files)
+		var un string
+		db.DB.QueryRow("SELECT Username FROM users WHERE ID = ?", sharelink.CreatedBy).Scan(&un)
+
+		var resp struct {
+			Title     string       `json:"share_title"`
+			ExpiresAt string       `json:"expires_at"`
+			CreatedBy string       `json:"created_by"`
+			Files     []model.File `json:"files"`
+		}
+		resp.Title = sharelink.ShareTitle
+		resp.ExpiresAt = expiresAtStr
+		resp.CreatedBy = un
+		resp.Files = files
+
+		data, err := json.Marshal(&resp)
 		if err != nil {
 			log.Printf("JSON 직렬화 실패: %v", err)
 			http.Error(w, "json encode failed", http.StatusInternalServerError)

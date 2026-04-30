@@ -33,7 +33,7 @@ func ListFiles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := db.DB.Query("SELECT ID, OriginalName, Size, MimeType, CreatedAt FROM files WHERE OwnerID = ?", nowUser)
+	rows, err := db.DB.Query("SELECT ID, OriginalName, Size, MimeType, UploadedAt FROM files WHERE OwnerID = ?", nowUser)
 	if err != nil {
 		log.Printf("파일 목록 조회 실패: %v", err)
 		http.Error(w, "db error", http.StatusInternalServerError)
@@ -43,7 +43,7 @@ func ListFiles(w http.ResponseWriter, r *http.Request) {
 
 	for rows.Next() {
 		var f model.File
-		err = rows.Scan(&f.ID, &f.OriginalName, &f.Size, &f.MimeType, &f.CreatedAt)
+		err = rows.Scan(&f.ID, &f.OriginalName, &f.Size, &f.MimeType, &f.UploadedAt)
 		if err != nil {
 			log.Printf("파일 행 읽기 실패: %v", err)
 			http.Error(w, "db error", http.StatusInternalServerError)
@@ -53,7 +53,7 @@ func ListFiles(w http.ResponseWriter, r *http.Request) {
 	}
 	rows.Close()
 
-	rows, err = db.DB.Query("SELECT f.ID, f.OriginalName, f.Size, f.MimeType, f.CreatedAt From files f JOIN file_permissions fp ON f.ID = fp.FileID WHERE fp.UserID = ? AND f.OwnerID != ?", nowUser, nowUser)
+	rows, err = db.DB.Query(`SELECT f.ID, f.OriginalName, f.Size, f.MimeType, f.UploadedAt, u.Username FROM files f JOIN file_permissions fp ON f.ID = fp.FileID JOIN users u ON f.OwnerID = u.ID WHERE fp.UserID = ? AND f.OwnerID != ? ORDER BY u.Username`, nowUser, nowUser)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -62,7 +62,7 @@ func ListFiles(w http.ResponseWriter, r *http.Request) {
 
 	for rows.Next() {
 		var f model.File
-		err = rows.Scan(&f.ID, &f.OriginalName, &f.Size, &f.MimeType, &f.CreatedAt)
+		err = rows.Scan(&f.ID, &f.OriginalName, &f.Size, &f.MimeType, &f.UploadedAt, &f.OwnerName)
 		if err != nil {
 			log.Printf("파일 행 읽기 실패: %v", err)
 			http.Error(w, "db error", http.StatusInternalServerError)
@@ -112,7 +112,7 @@ func UploadFiles(w http.ResponseWriter, r *http.Request) {
 			OriginalName: fileHeader.Filename,
 			Size:         fileHeader.Size,
 			MimeType:     fileHeader.Header.Get("Content-Type"),
-			CreatedAt:    time.Now().Format(time.RFC3339),
+			UploadedAt:   time.Now().Format(time.RFC3339),
 		}
 
 		ownerPerm := model.FilePermission{
@@ -173,7 +173,7 @@ func UploadFiles(w http.ResponseWriter, r *http.Request) {
 		file.Close()
 		savedFile.Close()
 
-		_, err = db.DB.Exec("INSERT INTO files (ID, OwnerID, OriginalName, StoredName, Size, MimeType, CreatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)", newFile.ID, newFile.OwnerID, newFile.OriginalName, newFile.StoredName, newFile.Size, newFile.MimeType, newFile.CreatedAt)
+		_, err = db.DB.Exec("INSERT INTO files (ID, OwnerID, OriginalName, StoredName, Size, MimeType, UploadedAt) VALUES (?, ?, ?, ?, ?, ?, ?)", newFile.ID, newFile.OwnerID, newFile.OriginalName, newFile.StoredName, newFile.Size, newFile.MimeType, newFile.UploadedAt)
 		if err != nil {
 			log.Printf("files INSERT 실패 [%s]: %v", newFile.ID, err)
 			http.Error(w, "db error", http.StatusInternalServerError)
@@ -187,7 +187,7 @@ func UploadFiles(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if adminID != "" {
+		if adminID != "" && nowUser != adminID {
 			_, err = db.DB.Exec("INSERT INTO file_permissions (FileID, UserID, Permission) VALUES (?, ?, ?)", adminPerm.FileID, adminPerm.UserID, adminPerm.Permission)
 			if err != nil {
 				log.Printf("adminPerm INSERT 실패 [%s]: %v", adminPerm.FileID, err)
@@ -374,6 +374,47 @@ func DeleteFiles(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(`{"ok":true}`))
+}
+
+func GetGrantedPerms(w http.ResponseWriter, r *http.Request) {
+	nowUser, err := getSessionUser(r)
+	if err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	type PermItem struct {
+		FileID     string `json:"file_id"`
+		FileName   string `json:"file_name"`
+		UserID     string `json:"user_id"`
+		Username   string `json:"username"`
+		Permission int    `json:"permission"`
+	}
+
+	rows, err := db.DB.Query(`
+		SELECT f.ID, f.OriginalName, fp.UserID, u.Username, fp.Permission
+		FROM files f
+		JOIN file_permissions fp ON f.ID = fp.FileID
+		JOIN users u ON fp.UserID = u.ID
+		WHERE f.OwnerID = ? AND fp.UserID != ?
+		ORDER BY f.OriginalName, u.Username`, nowUser, nowUser)
+	if err != nil {
+		http.Error(w, "db error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var items []PermItem
+	for rows.Next() {
+		var item PermItem
+		rows.Scan(&item.FileID, &item.FileName, &item.UserID, &item.Username, &item.Permission)
+		items = append(items, item)
+	}
+	if items == nil {
+		items = []PermItem{}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(items)
 }
 
 func UpdatePerm(w http.ResponseWriter, r *http.Request) {

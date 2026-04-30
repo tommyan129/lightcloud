@@ -38,12 +38,18 @@ func DBInit() {
 
 	createTableQueries := []string{
 		`
+	CREATE TABLE IF NOT EXISTS server_settings( 
+	Key TEXT PRIMARY KEY, -- 서버관련 설정을 항목 이름 => key 내용 => value에 저장
+	Value TEXT NOT NULL
+	)	
+	`,
+		`
 	CREATE TABLE IF NOT EXISTS users(
-		ID TEXT PRIMARY KEY,
-		Username TEXT NOT NULL,
-		Role TEXT NOT NULL,
-		PasswordHash TEXT NOT NULL,
-		CreatedAt TEXT NOT NULL
+	ID TEXT PRIMARY KEY,
+	Username TEXT NOT NULL,
+	Role TEXT NOT NULL,
+	PasswordHash TEXT NOT NULL,
+	CreatedAt TEXT NOT NULL
 	)`,
 		`
 	CREATE TABLE IF NOT EXISTS files(
@@ -53,7 +59,7 @@ func DBInit() {
 	StoredName TEXT NOT NULL,
 	Size INTEGER NOT NULL,
 	MimeType TEXT NOT NULL,
-	CreatedAt TEXT NOT NULL,
+	UploadedAt TEXT NOT NULL,
 	FOREIGN KEY (OwnerID) REFERENCES users(ID) ON DELETE CASCADE
 	)`,
 		`
@@ -67,6 +73,7 @@ func DBInit() {
 		`
 	CREATE TABLE IF NOT EXISTS share_links(
 	Token TEXT PRIMARY KEY,
+	Title TEXT NOT NULL DEFAULT '',
 	CreatedBy TEXT NOT NULL,
 	CreatedAt TEXT NOT NULL,
 	ExpiresAt TEXT NOT NULL,

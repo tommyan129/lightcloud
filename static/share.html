@@ -5,201 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CloudFiles — 공유 파일</title>
 <link rel="stylesheet" href="/static/css/lightcloud.css">
-<style>
-/* ── share.html 전용 추가 스타일 ── */
-
-/* 전체 화면 중앙 레이아웃 */
-.share-page {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg);
-  padding: 1.5rem;
-}
-
-/* 상단 브랜드 */
-.share-brand {
-  display: flex;
-  align-items: center;
-  gap: .6rem;
-  margin-bottom: 2rem;
-  font-weight: 700;
-  font-size: .95rem;
-  color: var(--text);
-}
-
-/* 공유 카드 (비밀번호 / 로딩) */
-.share-card {
-  width: 100%;
-  max-width: 400px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  padding: 2rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  animation: modal-in .2s ease;
-}
-
-.share-card-icon {
-  width: 52px; height: 52px;
-  border-radius: 14px;
-  background: var(--primary-bg);
-  display: flex; align-items: center; justify-content: center;
-  color: var(--primary);
-}
-
-.share-card h3 {
-  font-size: 1rem; font-weight: 700;
-  color: var(--text); text-align: center; margin: 0;
-}
-.share-card p {
-  font-size: .82rem; color: var(--text-muted);
-  text-align: center; margin: -.25rem 0 0;
-}
-
-/* 비밀번호 입력 */
-.pw-form {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: .6rem;
-}
-.pw-input-wrap { position: relative; }
-.pw-input-wrap input {
-  width: 100%;
-  padding: .55rem .75rem .55rem 2.4rem;
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg); color: var(--text);
-  font-size: .88rem; outline: none;
-  transition: border-color var(--transition);
-}
-.pw-input-wrap input:focus { border-color: var(--primary); }
-.pw-input-wrap svg {
-  position: absolute; left: .75rem; top: 50%;
-  transform: translateY(-50%);
-  pointer-events: none; color: var(--text-dim);
-}
-.pw-error {
-  font-size: .76rem; color: var(--danger);
-  min-height: 1rem; padding: 0 .1rem;
-}
-
-/* 로딩 스피너 */
-.spinner {
-  width: 36px; height: 36px;
-  border: 3px solid var(--border);
-  border-top-color: var(--primary);
-  border-radius: 50%;
-  animation: spin .7s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* 파일 목록 페이지 */
-.share-main {
-  width: 100%;
-  max-width: 780px;
-  animation: modal-in .2s ease;
-}
-
-.share-header {
-  display: flex; align-items: flex-start;
-  justify-content: space-between; gap: 1rem;
-  margin-bottom: 1.25rem;
-}
-.share-header-info { display: flex; align-items: center; gap: .75rem; }
-.share-header-icon {
-  width: 44px; height: 44px; border-radius: 12px;
-  background: var(--primary-bg); color: var(--primary);
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-.share-title { font-size: 1rem; font-weight: 700; color: var(--text); }
-.share-meta {
-  font-size: .76rem; color: var(--text-dim);
-  display: flex; gap: .75rem; margin-top: .15rem; flex-wrap: wrap;
-}
-.share-meta span { display: flex; align-items: center; gap: .3rem; }
-
-.share-header-actions { display: flex; gap: .5rem; flex-shrink: 0; }
-
-/* 검색 + 다운로드 툴바 */
-.share-toolbar {
-  display: flex; align-items: center; gap: .65rem;
-  margin-bottom: .75rem; flex-wrap: wrap;
-}
-.share-toolbar .search-wrap { flex: 1; min-width: 160px; }
-
-/* 파일 목록 컨테이너 */
-.share-file-wrap {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-/* 파일 목록만 스크롤 */
-.share-file-scroll {
-  overflow-y: auto;
-  max-height: 420px;
-}
-
-/* 파일 행 */
-.share-file-item {
-  display: flex; align-items: center; gap: .75rem;
-  padding: .75rem 1rem;
-  border-bottom: 1px solid var(--border-subtle);
-  transition: background var(--transition);
-}
-.share-file-item:last-child { border-bottom: none; }
-.share-file-item:hover { background: var(--surface2); }
-
-.sfi-check { flex-shrink: 0; }
-.sfi-icon  { flex-shrink: 0; }
-.sfi-info  { flex: 1; min-width: 0; }
-.sfi-name  { font-weight: 500; font-size: .85rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sfi-meta  { font-size: .72rem; color: var(--text-dim); font-family: var(--ff-mono); display: flex; gap: .5rem; margin-top: .1rem; }
-.sfi-actions { display: flex; align-items: center; gap: .3rem; flex-shrink: 0; }
-
-/* 만료 배너 */
-.expire-banner {
-  display: flex; align-items: center; gap: .5rem;
-  background: color-mix(in srgb, var(--danger) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--danger) 25%, transparent);
-  border-radius: var(--radius); padding: .55rem .9rem;
-  font-size: .78rem; color: var(--danger); margin-bottom: 1rem;
-}
-
-/* 일괄 다운로드 바 */
-.bulk-bar {
-  display: flex; align-items: center; gap: .65rem;
-  padding: .6rem 1rem;
-  background: var(--primary-bg);
-  border-bottom: 1px solid var(--border);
-  font-size: .82rem; color: var(--primary); font-weight: 500;
-}
-.bulk-bar span { flex: 1; }
-
-/* 다크 토글 (우상단) */
-.share-theme-btn {
-  position: fixed; top: 1rem; right: 1rem;
-  z-index: 10;
-}
-
-/* 빈 상태 */
-.share-empty {
-  text-align: center; padding: 2.5rem 1rem;
-  color: var(--text-dim); font-size: .85rem;
-}
-</style>
+<script>
+    const saved = localStorage.getItem('theme');
+    if (saved) document.documentElement.setAttribute('data-theme', saved);
+</script>
 </head>
 <body>
 
@@ -310,19 +119,19 @@
       </div>
     </div>
 
-    <!-- 툴바 -->
-    <div class="share-toolbar">
-      <div class="search-wrap">
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-          <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/>
-          <path d="M11 11l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        </svg>
-        <input class="search-input" type="search" id="shareSearch" placeholder="파일 검색…">
-      </div>
-    </div>
-
     <!-- 파일 목록 컨테이너 -->
     <div class="share-file-wrap">
+
+      <!-- 툴바 (sticky) -->
+      <div class="share-toolbar">
+        <div class="search-wrap">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M11 11l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <input class="search-input" type="search" id="shareSearch" placeholder="파일 검색…">
+        </div>
+      </div>
 
       <!-- 일괄 선택 바 -->
       <div class="bulk-bar" id="bulkBar" data-hidden>
@@ -336,17 +145,16 @@
         </button>
       </div>
 
-      <!-- 헤더 행 -->
-      <div style="display:flex;align-items:center;gap:.75rem;padding:.5rem 1rem;border-bottom:1.5px solid var(--border);">
-        <div style="flex-shrink:0;width:16px">
-          <input type="checkbox" id="selectAllShareHeader" title="전체 선택">
-        </div>
-        <div style="flex:1;font-size:.7rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text-dim)">파일명</div>
-        <div style="width:80px;font-size:.7rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text-dim);text-align:right">크기</div>
-        <div style="width:90px"></div>
-      </div>
-
       <div class="share-file-scroll">
+        <!-- 헤더 행 (sticky) -->
+        <div style="position:sticky;top:0;display:flex;align-items:center;gap:.75rem;padding:.5rem 1rem;border-bottom:1.5px solid var(--border);background:var(--surface);z-index:1;">
+          <div style="flex-shrink:0;width:16px">
+            <input type="checkbox" id="selectAllShareHeader" title="전체 선택">
+          </div>
+          <div style="flex:1;font-size:.7rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text-dim)">파일명</div>
+          <div style="width:80px;font-size:.7rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text-dim);text-align:right">크기</div>
+          <div style="width:90px"></div>
+        </div>
         <div id="shareFileList"></div>
         <div class="share-empty" id="shareEmpty" data-hidden>파일을 찾을 수 없어요</div>
       </div>
@@ -359,60 +167,52 @@
 'use strict';
 
 /* ═══════════════════════════════════════════
-   API LAYER (fetch 연결은 나중에)
+   API LAYER
 ═══════════════════════════════════════════ */
-const api = {
-  /** GET /share?token=xxx → { share, files } */
-  async getShare(token) {
-    // TODO:
-    // const res = await fetch(`/share?token=${token}`, { credentials: 'include' });
-    // if (!res.ok) throw new Error(await res.text());
-    // return res.json();
-    return mockDelay(MOCK_SHARE);
-  },
-
-  /** POST /share/verify → { ok, error? } */
-  async verifyPassword(token, password) {
-    // TODO:
-    // const res = await fetch('/share/verify', {
-    //   method: 'POST', credentials: 'include',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ token, password }),
-    // });
-    // if (!res.ok) throw new Error(await res.text());
-    // return res.json();
-    return mockDelay(password === '1234' ? { ok: true } : { ok: false, error: '비밀번호가 틀렸어요' });
-  },
-
-  /** GET /share/download?token=xxx&ids=1,2 */
-  downloadUrl(token, ids) {
-    // TODO: return `/share/download?token=${token}&ids=${ids.join(',')}`;
-    return '#';
-  },
-};
-
-function mockDelay(data, ms = 800) {
-  return new Promise(r => setTimeout(() => r(data), ms));
+function mapFile(f) {
+  const ext = f.mime_type ? f.mime_type.split('/').pop() : 'bin';
+  return { id: f.id, name: f.original_name, size: f.size, mime: ext, uploadedAt: f.uploaded_at ? f.uploaded_at.slice(0, 10) : '' };
 }
 
-/* ═══════════════════════════════════════════
-   MOCK DATA
-═══════════════════════════════════════════ */
-const MOCK_SHARE = {
-  share: {
-    title: '2026 Q2 디자인 에셋',
-    sharedBy: 'jina@company.com',
-    expiresAt: '2026-05-10T23:59:00',
-    hasPassword: true,
-    fileCount: 5,
+const api = {
+  async getShare(token) {
+    const res = await fetch(`/share?token=${encodeURIComponent(token)}`, {
+  credentials: 'include' });
+    if (!res.ok) throw Object.assign(new Error(res.statusText), { status:
+  res.status });
+    const data = await res.json();
+    return {
+      hasPassword: !!data.requires_password,
+      title:       data.title        || '',
+      expiresAt:   data.expires_at   || '',
+      createdBy:   data.created_by   || '',
+      files:       (data.files || []).map(mapFile),
+    };
   },
-  files: [
-    { id: 1, name: 'Brand Guidelines.pdf',   size: 4412416,  mime: 'pdf',  uploadedAt: '2026-04-22' },
-    { id: 2, name: 'Hero Banner.figma',       size: 13421772, mime: 'fig',  uploadedAt: '2026-04-20' },
-    { id: 3, name: 'Campaign Video.mp4',      size: 249561088,mime: 'mp4',  uploadedAt: '2026-04-18' },
-    { id: 4, name: 'Q2 Report.xlsx',          size: 1153433,  mime: 'xls',  uploadedAt: '2026-04-15' },
-    { id: 5, name: 'Product Photos.zip',      size: 95420416, mime: 'zip',  uploadedAt: '2026-03-22' },
-  ],
+
+  async verifyPassword(token, password) {
+    const res = await fetch(`/share?token=${encodeURIComponent(token)}`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
+    if (res.status === 401) return { ok: false, error: '비밀번호가 틀렸어요' };
+    if (!res.ok) return { ok: false, error: '오류가 발생했어요' };
+    const resp = await res.json();
+    return {
+      ok:        true,
+      title:     resp.title       || '',
+      expiresAt: resp.expires_at  || '',
+      createdBy: resp.created_by  || '',
+      files:     (resp.files || []).map(mapFile),
+    };
+  },
+
+  downloadUrl(token, ids) {
+    const q = ids.map(id => `ids=${encodeURIComponent(id)}`).join('&');
+    return `/share/download?token=${encodeURIComponent(token)}&${q}`;
+  },
 };
 
 const EXT_COLOR = {
@@ -425,14 +225,12 @@ const EXT_COLOR = {
    STATE
 ═══════════════════════════════════════════ */
 const state = {
-  phase: 'loading',   // 'loading' | 'password' | 'files'
+  phase: 'loading',
   token: '',
-  share: null,
   files: [],
-  filtered: [],
   selected: new Set(),
   search: '',
-  theme: 'light',
+  theme: localStorage.getItem('theme') || 'light',
 };
 
 /* ═══════════════════════════════════════════
@@ -461,9 +259,7 @@ function extIconHTML(mime, size = 32) {
 }
 
 function formatExpire(iso) {
-  const d = new Date(iso);
-  const now = Date.now();
-  const diff = d - now;
+  const diff = new Date(iso) - Date.now();
   if (diff <= 0) return '만료됨';
   const days = Math.floor(diff / 86400000);
   if (days > 0) return `${days}일 후 만료`;
@@ -488,12 +284,17 @@ function showPhase(phase) {
   document.getElementById('stateFiles').toggleAttribute('data-hidden',    phase !== 'files');
 }
 
+function showError(msg) {
+  document.getElementById('stateLoading').innerHTML = `<p style="color:#e03">${msg}</p>`;
+  showPhase('loading');
+}
+
 /* ═══════════════════════════════════════════
    RENDER FILE LIST
 ═══════════════════════════════════════════ */
 function renderFiles() {
-  const list   = document.getElementById('shareFileList');
-  const empty  = document.getElementById('shareEmpty');
+  const list    = document.getElementById('shareFileList');
+  const empty   = document.getElementById('shareEmpty');
   const filtered = getFiltered();
 
   if (!filtered.length) {
@@ -515,6 +316,9 @@ function renderFiles() {
           <span>${formatBytes(f.size)}</span>
           <span>${f.uploadedAt}</span>
         </div>
+      </div>
+      <div class="sfi-size">
+        ${formatBytes(f.size)}
       </div>
       <div class="sfi-actions">
         <button class="btn-icon btn-dl" title="다운로드" data-action="download" data-id="${f.id}">
@@ -539,7 +343,7 @@ function updateBulkBar() {
 function syncSelectAll() {
   const filtered = getFiltered();
   const allCb = document.getElementById('selectAllShareHeader');
-  allCb.checked      = filtered.length > 0 && filtered.every(f => state.selected.has(f.id));
+  allCb.checked       = filtered.length > 0 && filtered.every(f => state.selected.has(f.id));
   allCb.indeterminate = !allCb.checked && filtered.some(f => state.selected.has(f.id));
   document.getElementById('selectAllShare').checked = allCb.checked;
 }
@@ -547,45 +351,50 @@ function syncSelectAll() {
 /* ═══════════════════════════════════════════
    FILL SHARE INFO
 ═══════════════════════════════════════════ */
-function fillShareInfo(share) {
-  document.title = `CloudFiles — ${share.title}`;
-  document.getElementById('shareTitle').textContent   = share.title;
-  document.getElementById('sharedBy').textContent     = share.sharedBy;
-  document.getElementById('sharedExpire').textContent = formatExpire(share.expiresAt);
-  document.getElementById('fileCountMeta').textContent = `${share.fileCount}개 파일`;
 
-  // 만료 임박 배너
-  const diff = new Date(share.expiresAt) - Date.now();
-  if (diff < 86400000 && diff > 0) {
-    document.getElementById('expireText').textContent = `⚠️ 이 링크는 ${formatExpire(share.expiresAt)} 만료돼요`;
-    document.getElementById('expireBanner').removeAttribute('data-hidden');
-  }
-  if (diff <= 0) {
-    document.getElementById('expireText').textContent = '이 공유 링크는 만료됐어요';
-    document.getElementById('expireBanner').removeAttribute('data-hidden');
+function fillShareInfo(data) {
+  const title = data.title || 'CloudedFile';
+  document.title = `CloudFiles — ${title}`;
+  document.getElementById('shareTitle').textContent    = title;
+  document.getElementById('sharedBy').textContent      = data.createdBy || '';
+  document.getElementById('sharedExpire').textContent  = data.expiresAt ? formatExpire(data.expiresAt) : '';
+  document.getElementById('fileCountMeta').textContent = `${data.files.length}개 파일`;
+
+  if (data.expiresAt) {
+    const diff = new Date(data.expiresAt) - Date.now();
+    if (diff < 86400000 && diff > 0) {
+      document.getElementById('expireText').textContent = `⚠️ 이 링크는 ${formatExpire(data.expiresAt)} 돼요`;
+      document.getElementById('expireBanner').removeAttribute('data-hidden');
+    }
+    if (diff <= 0) {
+      document.getElementById('expireText').textContent = '이 공유 링크는 만료됐어요';
+      document.getElementById('expireBanner').removeAttribute('data-hidden');
+    }
   }
 }
+
 
 /* ═══════════════════════════════════════════
    INIT
 ═══════════════════════════════════════════ */
 async function init() {
   showPhase('loading');
-
-  // 실제 연동 시: const token = new URLSearchParams(location.search).get('token');
-  const token = 'mock-token';
+  const token = new URLSearchParams(location.search).get('token');
+  if (!token) { showError('잘못된 링크예요'); return; }
   state.token = token;
 
-  const data = await api.getShare(token);
-  state.share = data.share;
-  state.files = data.files;
-
-  if (data.share.hasPassword) {
-    showPhase('password');
-  } else {
-    fillShareInfo(data.share);
-    showPhase('files');
-    renderFiles();
+  try {
+    const data = await api.getShare(token);
+    if (data.hasPassword) {
+      showPhase('password');
+    } else {
+      state.files = data.files;
+      fillShareInfo(data);
+      showPhase('files');
+      renderFiles();
+    }
+  } catch (e) {
+    showError(e.status === 404 || e.status === 410 ? '링크가 만료됐거나 존재하지 않아요' : '오류가 발생했어요');
   }
 }
 
@@ -608,7 +417,8 @@ document.getElementById('pwForm').addEventListener('submit', async e => {
   btn.textContent = '확인';
 
   if (result.ok) {
-    fillShareInfo(state.share);
+    state.files = result.files;
+    fillShareInfo(result);
     showPhase('files');
     renderFiles();
   } else {
@@ -620,17 +430,15 @@ document.getElementById('pwForm').addEventListener('submit', async e => {
 /* ═══════════════════════════════════════════
    파일 목록 이벤트
 ═══════════════════════════════════════════ */
-// 체크박스 위임
 document.getElementById('shareFileList').addEventListener('change', e => {
   const cb = e.target.closest('input[type="checkbox"][data-id]');
   if (!cb) return;
-  const id = Number(cb.dataset.id);
+  const id = cb.dataset.id;
   cb.checked ? state.selected.add(id) : state.selected.delete(id);
   updateBulkBar();
   syncSelectAll();
 });
 
-// 전체 선택 (헤더)
 function handleSelectAll(checked) {
   getFiltered().forEach(f => checked ? state.selected.add(f.id) : state.selected.delete(f.id));
   renderFiles();
@@ -638,30 +446,21 @@ function handleSelectAll(checked) {
 document.getElementById('selectAllShareHeader').addEventListener('change', e => handleSelectAll(e.target.checked));
 document.getElementById('selectAllShare').addEventListener('change', e => handleSelectAll(e.target.checked));
 
-// 개별 다운로드
 document.getElementById('shareFileList').addEventListener('click', e => {
   const btn = e.target.closest('[data-action="download"]');
   if (!btn) return;
-  const id  = Number(btn.dataset.id);
-  // TODO: window.location.href = api.downloadUrl(state.token, [id]);
-  console.log('download', id);
+  window.location.href = api.downloadUrl(state.token, [btn.dataset.id]);
 });
 
-// 전체 다운로드
 document.getElementById('btnDownloadAll').addEventListener('click', () => {
-  const ids = state.files.map(f => f.id);
-  // TODO: window.location.href = api.downloadUrl(state.token, ids);
-  console.log('download all', ids);
+  window.location.href = api.downloadUrl(state.token, state.files.map(f => f.id));
 });
 
-// 선택 다운로드
 document.getElementById('btnDownloadSelected').addEventListener('click', () => {
-  const ids = [...state.selected];
-  // TODO: window.location.href = api.downloadUrl(state.token, ids);
-  console.log('download selected', ids);
+  if (state.selected.size === 0) return;
+  window.location.href = api.downloadUrl(state.token, [...state.selected]);
 });
 
-// 검색
 document.getElementById('shareSearch').addEventListener('input', e => {
   state.search = e.target.value;
   renderFiles();
@@ -675,13 +474,9 @@ document.getElementById('btnTheme').addEventListener('click', () => {
   document.documentElement.setAttribute('data-theme', state.theme);
   document.getElementById('iconMoon').toggleAttribute('data-hidden', state.theme === 'dark');
   document.getElementById('iconSun').toggleAttribute('data-hidden',  state.theme === 'light');
+  localStorage.setItem('theme', state.theme);
 });
 
-/* ═══════════════════════════════════════════
-   START
-   상태 전환 시연: loading(0.8s) → password → files
-   비밀번호: 1234
-═══════════════════════════════════════════ */
 init();
 </script>
 </body>

@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CloudFiles</title>
 <link rel="stylesheet" href="/static/css/lightcloud.css">
+<script>
+    const saved = localStorage.getItem('theme');
+    if (saved) document.documentElement.setAttribute('data-theme', saved);
+</script>
 </head>
 <body>
 
@@ -35,6 +39,18 @@
       <a href="#" class="nav-link active" data-folder="">
         <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M2 5h5l2 2h9v10H2z" fill="currentColor" opacity=".2" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
         All Files <span class="count" id="countAll">0</span>
+      </a>
+    </nav>
+
+    <div class="nav-label">관리</div>
+    <nav>
+      <a href="#" class="nav-link" id="btnNavShareLinks">
+        <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><circle cx="15" cy="5" r="2.5" stroke="currentColor" stroke-width="1.5"/><circle cx="5" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/><circle cx="15" cy="15" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M7.3 9l5-2.5M7.3 11l5 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        공유 링크
+      </a>
+      <a href="#" class="nav-link" id="btnNavGrantedPerms">
+        <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><rect x="4" y="9" width="12" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M7 9V7a3 3 0 1 1 6 0v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        권한 목록
       </a>
     </nav>
 
@@ -155,13 +171,20 @@
       <button class="btn btn-primary" id="btnCopyLink">링크 복사</button>
     </div>
     <div class="copy-toast" id="copyToast"></div>
-    <div>
-      <label>만료</label>
-      <input type="datetime-local" id="expireDate" placeholder="예: 7">
+    <div class="modal-field">
+      <input
+    type="text"
+    class="modal-input"
+    id="expireDate"
+    placeholder="만료일"
+    onfocus="this.type='datetime-local'"
+    onblur="if(!this.value) this.type='text'">
     </div>
-    <div>
-      <label>비밀번호</label>
-      <input type="password" id="sharePassword" placeholder="">
+    <div class="modal-field">
+      <input type="text" id="shareTitle" class="modal-input" placeholder="공유 링크 이름 (선택)">
+    </div>
+    <div class="modal-field">
+      <input type="password" class="modal-input" id="sharePassword" placeholder="비밀번호 (선택)">
     </div>
     <div class="modal-footer">
       <button class="btn btn-primary" id="btnCreateLink">링크 생성</button>
@@ -170,29 +193,85 @@
   </div>
 </div>
 
+<!-- ════ DELETE CONFIRM MODAL ════ -->
+<div class="modal-backdrop" id="deleteModal" data-hidden>
+  <div class="modal" style="max-width:360px">
+    <div class="modal-header">
+      <h4>삭제 확인</h4>
+      <button class="modal-close" data-close="deleteModal">✕</button>
+    </div>
+    <p id="deleteModalMsg" style="margin:.5rem 0 1rem;font-size:.88rem"></p>
+    <div class="modal-footer">
+      <button class="btn btn-danger" id="btnConfirmDelete">삭제</button>
+      <button class="btn btn-outline" data-close="deleteModal">취소</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════ PERMISSION MODAL ════ -->
 <div class="modal-backdrop" id="permModal" data-hidden>
   <div class="modal">
     <div class="modal-header">
-      <h4 id="permModalTitle">권한 수정</h4>
+      <h4>권한 수정</h4>
       <button class="modal-close" data-close="permModal">✕</button>
     </div>
     <p class="modal-subtitle" id="permSubtitle"></p>
-    <div class="field">
-      <label>접근 레벨</label>
-      <select id="permLevel">
-        <option value="private">🔒 비공개 (본인만)</option>
-        <option value="org">🏢 조직 내 공유</option>
-        <option value="public">🌐 공개 링크</option>
-      </select>
+    <div class="modal-field user-search-wrap">
+      <input type="text" class="modal-input" id="permUserSearch" placeholder="유저 검색…" autocomplete="off">
+      <div class="user-dropdown" id="permUserDropdown" data-hidden></div>
     </div>
-    <div class="field" id="ownerField" data-hidden>
-      <label>소유자 이메일</label>
-      <input type="email" id="ownerEmail" placeholder="example@company.com">
-    </div>
+    <div id="permUserList" style="display:flex;flex-direction:column;gap:.4rem;max-height:200px;overflow-y:auto;margin-bottom:.5rem"></div>
     <div class="modal-footer">
       <button class="btn btn-outline" data-close="permModal">취소</button>
       <button class="btn btn-primary" id="btnSavePerm">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ OWNER MODAL ════ -->
+<div class="modal-backdrop" id="ownerModal" data-hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h4>소유자 수정</h4>
+      <button class="modal-close" data-close="ownerModal">✕</button>
+    </div>
+    <p class="modal-subtitle" id="ownerSubtitle"></p>
+    <div class="modal-field user-search-wrap">
+      <input type="text" class="modal-input" id="ownerUserSearch" placeholder="유저 검색…" autocomplete="off">
+      <div class="user-dropdown" id="ownerUserDropdown" data-hidden></div>
+    </div>
+    <div id="ownerSelectedDisplay" style="font-size:.84rem;color:var(--text-muted);min-height:1.4rem"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" data-close="ownerModal">취소</button>
+      <button class="btn btn-primary" id="btnSaveOwner">확인</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ SHARE LINKS LIST MODAL ════ -->
+<div class="modal-backdrop" id="shareLinksModal" data-hidden>
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h4>내 공유 링크</h4>
+      <button class="modal-close" data-close="shareLinksModal">✕</button>
+    </div>
+    <div id="shareLinksBody" style="max-height:400px;overflow-y:auto;display:flex;flex-direction:column;gap:.45rem;margin-bottom:.5rem"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" data-close="shareLinksModal">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ GRANTED PERMS MODAL ════ -->
+<div class="modal-backdrop" id="grantedPermsModal" data-hidden>
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h4>권한 부여 목록</h4>
+      <button class="modal-close" data-close="grantedPermsModal">✕</button>
+    </div>
+    <div id="grantedPermsBody" style="max-height:400px;overflow-y:auto;display:flex;flex-direction:column;gap:.5rem;margin-bottom:.5rem"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" data-close="grantedPermsModal">닫기</button>
     </div>
   </div>
 </div>
@@ -214,9 +293,14 @@ const api = {
     return res.json()
   },
 
-  /** DELETE /files  body: { ids: [] } */
   async deleteFiles(ids) {
-    
+    const res = await fetch('/delete', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ids})
+    });
+    if (!res.ok) throw new Error(await res.text());
   },
 
   // POST /files/upload
@@ -228,27 +312,47 @@ const api = {
     return res.json()    
   },
 
-  /** PATCH /files/:id/permission */
-  async updatePermission(id, level) {
-    
+  async updatePermission(fileId, permissions) {
+    const res = await fetch('/perm', {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({file_id: fileId, permissions})
+    });
+    if (!res.ok) throw new Error(await res.text());
   },
 
-  /** PATCH /files/:id/owner */
-  async updateOwner(id, email) {
-    
+  async updateOwner(fileId, targetUserId) {
+    const res = await fetch('/owner', {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({file_id: fileId, targetuser: targetUserId})
+    });
+    if (!res.ok) throw new Error(await res.text());
+  },
+
+  async getMyShareLinks() {
+    const res = await fetch('/share/list', {credentials: 'include'});
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  async getGrantedPerms() {
+    const res = await fetch('/perm/granted', {credentials: 'include'});
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
   },
 
   /** POST /files/:id/share → returns share URL */
-  async createShareLink(ids, hours, password) {
+  async createShareLink(ids, hours, password, title) {
     const res = await fetch('/share/create',{
       method: 'POST',
       credentials: 'include',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({file_ids: ids, expires_hours: hours, password: password})
+      body: JSON.stringify({file_ids: ids, expires_hours: hours, password: password, share_title: title})
     })
     if (!res.ok) throw new Error(await res.text())
     const data = await res.json()
-    return { url: `${window.location.origin}/share?token=${data.token}` }
+    return { url: `${window.location.origin}/share/view?token=${data.token}` }
   },
 };
 
@@ -307,17 +411,161 @@ function extIconHTML(mime) {
 }
 
 function getFiltered() {
-  return state.files
-    .filter(f => {
-      if (state.folder && f.folder !== state.folder) return false;
-      if (state.mime   && f.mime   !== state.mime)   return false;
-      if (state.search && !f.name.toLowerCase().includes(state.search.toLowerCase())) return false;
-      return true;
-    })
-    .sort((a, b) => {
-      const v = a[state.sortKey] < b[state.sortKey] ? -1 : a[state.sortKey] > b[state.sortKey] ? 1 : 0;
-      return state.sortDir === 'asc' ? v : -v;
-    });
+  return state.files.filter(f => {
+    if (state.folder && f.folder !== state.folder) return false;
+    if (state.mime   && f.mime   !== state.mime)   return false;
+    if (state.search && !f.name.toLowerCase().includes(state.search.toLowerCase())) return false;
+    return true;
+  });
+}
+
+function sortFiles(arr) {
+  return [...arr].sort((a, b) => {
+    const v = a[state.sortKey] < b[state.sortKey] ? -1 : a[state.sortKey] > b[state.sortKey] ? 1 : 0;
+    return state.sortDir === 'asc' ? v : -v;
+  });
+}
+
+function groupShared(files) {
+  const map = new Map();
+  for (const f of files) {
+    if (!map.has(f.ownerName)) map.set(f.ownerName, []);
+    map.get(f.ownerName).push(f);
+  }
+  return [...map.entries()]
+    .sort(([a], [b]) => a.localeCompare(b, 'ko'))
+    .map(([name, fs]) => [name, sortFiles(fs)]);
+}
+
+function sectionHdrRow(label, count) {
+  return `<tr class="section-hdr"><td colspan="6">${label}<span class="section-count">${count}</span></td></tr>`;
+}
+
+function rowHTML(f) {
+  return `<tr>
+    <td><input type="checkbox" data-id="${f.id}" ${state.selected.has(f.id) ? 'checked' : ''}></td>
+    <td><div class="file-cell">${extIconHTML(f.mime)}<span class="file-name">${f.name}</span></div></td>
+    <td><span class="mono">${f.size}</span></td>
+    <td><span class="badge" style="background:${getColor(f.mime)}22;color:${getColor(f.mime)}">${f.mime.toUpperCase()}</span></td>
+    <td><span class="mono">${f.uploadedTime}</span></td>
+    <td><div class="row-actions">
+      <button class="btn-icon btn-dl" title="다운로드" data-action="download" data-id="${f.id}">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M4 7l3 3 3-3M1 11h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+      <button class="btn-icon btn-share" title="공유" data-action="share" data-id="${f.id}">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="11" cy="3" r="1.8" stroke="currentColor" stroke-width="1.4"/><circle cx="3" cy="7" r="1.8" stroke="currentColor" stroke-width="1.4"/><circle cx="11" cy="11" r="1.8" stroke="currentColor" stroke-width="1.4"/><path d="M4.7 6l4-2M4.7 8l4 2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      </button>
+      <button class="btn-icon btn-del" title="삭제" data-action="delete" data-id="${f.id}">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M5 4V2h4v2M4 4l.8 8h4.4l.8-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+      <div class="dropdown-wrap">
+        <button class="btn-icon btn-more" title="더보기" data-action="more" data-id="${f.id}">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="3" r="1.2" fill="currentColor"/><circle cx="7" cy="7" r="1.2" fill="currentColor"/><circle cx="7" cy="11" r="1.2" fill="currentColor"/></svg>
+        </button>
+        <div class="dropdown-menu" id="dd-${f.id}" data-hidden>
+          <button data-action="perm" data-id="${f.id}">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect x="3" y="6" width="8" height="7" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5 6V4a2 2 0 1 1 4 0v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+            권한 수정
+          </button>
+          <button data-action="owner" data-id="${f.id}">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="4" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M1 13c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+            소유자 수정
+          </button>
+          <div class="divider"></div>
+          <button class="danger" data-action="delete" data-id="${f.id}">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M5 4V2h4v2M4 4l.8 8h4.4l.8-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            삭제
+          </button>
+        </div>
+      </div>
+    </div></td>
+  </tr>`;
+}
+
+function gridCardHTML(f) {
+  return `<div class="grid-card">
+    ${extIconHTML(f.mime)}
+    <div class="fname">${f.name}</div>
+    <div class="fsize">${f.size}</div>
+    <div class="row-actions" style="justify-content:center">
+      <button class="btn-icon btn-dl" style="width:26px;height:26px" title="다운로드" data-action="download" data-id="${f.id}">
+        <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M4 7l3 3 3-3M1 11h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+      <button class="btn-icon btn-share" style="width:26px;height:26px" data-action="share" data-id="${f.id}">
+        <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><circle cx="11" cy="3" r="1.8" stroke="currentColor" stroke-width="1.4"/><circle cx="3" cy="7" r="1.8" stroke="currentColor" stroke-width="1.4"/><circle cx="11" cy="11" r="1.8" stroke="currentColor" stroke-width="1.4"/><path d="M4.7 6l4-2M4.7 8l4 2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      </button>
+      <button class="btn-icon btn-del" style="width:26px;height:26px" data-action="delete" data-id="${f.id}">
+        <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M5 4V2h4v2M4 4l.8 8h4.4l.8-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+      <div class="dropdown-wrap">
+        <button class="btn-icon btn-more" style="width:26px;height:26px" data-action="more" data-id="g${f.id}">
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="3" r="1.2" fill="currentColor"/><circle cx="7" cy="7" r="1.2" fill="currentColor"/><circle cx="7" cy="11" r="1.2" fill="currentColor"/></svg>
+        </button>
+        <div class="dropdown-menu" id="dd-g${f.id}" data-hidden style="right:auto;left:0">
+          <button data-action="perm" data-id="${f.id}">권한 수정</button>
+          <button data-action="owner" data-id="${f.id}">소유자 수정</button>
+          <div class="divider"></div>
+          <button class="danger" data-action="delete" data-id="${f.id}">삭제</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function permLabel(perm) {
+  return PERM_BITS.filter(({bit}) => perm & bit).map(({label}) => label).join(' · ');
+}
+
+function fmtExpiry(iso) {
+  const diff = new Date(iso) - Date.now();
+  if (diff < 0) return '만료됨';
+  const days = Math.ceil(diff / 86400000);
+  return days <= 1 ? '오늘 만료' : `${days}일 후 만료`;
+}
+
+function renderShareLinksList(items) {
+  const body = document.getElementById('shareLinksBody');
+  if (!items.length) {
+    body.innerHTML = '<div style="font-size:.84rem;color:var(--text-muted);text-align:center;padding:1.5rem 0">공유 링크 없음</div>';
+    return;
+  }
+  const lockSVG = `<svg width="11" height="11" viewBox="0 0 14 14" fill="none" style="color:var(--text-dim);flex-shrink:0"><rect x="3" y="6" width="8" height="7" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5 6V4a2 2 0 1 1 4 0v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>`;
+  body.innerHTML = items.map(item => `
+    <div class="share-link-item">
+      <div class="sli-info">
+        <div class="sli-title-row">
+          <span class="sli-title">${item.share_title || '(무제)'}</span>
+          ${item.has_password ? lockSVG : ''}
+        </div>
+        <div class="sli-meta">파일 ${item.file_count}개 &middot; ${fmtExpiry(item.expires_at)}</div>
+      </div>
+      <button class="btn btn-outline sli-copy" style="padding:.25rem .6rem;font-size:.78rem;white-space:nowrap" data-token="${item.token}">링크 복사</button>
+    </div>
+  `).join('');
+}
+
+function renderGrantedPerms(items) {
+  const body = document.getElementById('grantedPermsBody');
+  if (!items.length) {
+    body.innerHTML = '<div style="font-size:.84rem;color:var(--text-muted);text-align:center;padding:1.5rem 0">부여한 권한 없음</div>';
+    return;
+  }
+  const files = new Map();
+  for (const item of items) {
+    if (!files.has(item.file_id)) files.set(item.file_id, {name: item.file_name, users: []});
+    files.get(item.file_id).users.push({username: item.username, permission: item.permission});
+  }
+  body.innerHTML = [...files.values()].map(f => `
+    <div class="gp-file-group">
+      <div class="gp-filename">${f.name}</div>
+      ${f.users.map(u => `
+        <div class="gp-user-row">
+          <span class="gp-username">${u.username}</span>
+          <span class="gp-bits">${permLabel(u.permission)}</span>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
 }
 
 /* ═══════════════════════════════════════════
@@ -334,100 +582,43 @@ function render() {
     th.textContent = label + (key === state.sortKey ? (state.sortDir === 'asc' ? ' ↑' : ' ↓') : '');
   });
 
+  // group by owner
+  const mine = sortFiles(filtered.filter(f => !f.ownerName));
+  const sharedGroups = groupShared(filtered.filter(f => f.ownerName));
+  const allInView = [...mine, ...sharedGroups.flatMap(([, fs]) => fs)];
+
   // ── list ──
   const tbody = document.getElementById('fileTableBody');
-  tbody.innerHTML = filtered.map(f => `
-    <tr>
-      <td><input type="checkbox" data-id="${f.id}" ${state.selected.has(f.id) ? 'checked' : ''}></td>
-      <td>
-        <div class="file-cell">
-          ${extIconHTML(f.mime)}
-          <span class="file-name">${f.name}</span>
-        </div>
-      </td>
-      <td><span class="mono">${f.size}</span></td>
-      <td>
-        <span class="badge" style="background:${getColor(f.mime)}22;color:${getColor(f.mime)}">
-          ${f.mime.toUpperCase()}
-        </span>
-      </td>
-      <td><span class="mono">${f.uploadedTime}</span></td>
-      <td>
-        <div class="row-actions">
-          <button class="btn-icon btn-dl" title="다운로드" data-action="download" data-id="${f.id}">
-            <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M4 7l3 3 3-3M1 11h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-          </button>
-          <button class="btn-icon btn-share" title="공유" data-action="share" data-id="${f.id}">
-            <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="11" cy="3" r="1.8" stroke="currentColor" stroke-width="1.4"/><circle cx="3" cy="7" r="1.8" stroke="currentColor" stroke-width="1.4"/><circle cx="11" cy="11" r="1.8" stroke="currentColor" stroke-width="1.4"/><path d="M4.7 6l4-2M4.7 8l4 2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-          </button>
-          <button class="btn-icon btn-del" title="삭제" data-action="delete" data-id="${f.id}">
-            <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M5 4V2h4v2M4 4l.8 8h4.4l.8-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-          </button>
-          <div class="dropdown-wrap">
-            <button class="btn-icon btn-more" title="더보기" data-action="more" data-id="${f.id}">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="3" r="1.2" fill="currentColor"/><circle cx="7" cy="7" r="1.2" fill="currentColor"/><circle cx="7" cy="11" r="1.2" fill="currentColor"/></svg>
-            </button>
-            <div class="dropdown-menu" id="dd-${f.id}" data-hidden>
-              <button data-action="perm" data-id="${f.id}">
-                <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect x="3" y="6" width="8" height="7" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5 6V4a2 2 0 1 1 4 0v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-                권한 수정
-              </button>
-              <button data-action="owner" data-id="${f.id}">
-                <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="4" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M1 13c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-                소유자 수정
-              </button>
-              <div class="divider"></div>
-              <button class="danger" data-action="delete" data-id="${f.id}">
-                <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M5 4V2h4v2M4 4l.8 8h4.4l.8-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-                삭제
-              </button>
-            </div>
-          </div>
-        </div>
-      </td>
-    </tr>
-  `).join('');
-
-  document.getElementById('emptyList').toggleAttribute('data-hidden', filtered.length > 0);
+  let html = '';
+  if (mine.length > 0) {
+    html += sectionHdrRow('내 파일 ', mine.length);
+    html += mine.map(rowHTML).join('');
+  }
+  for (const [name, files] of sharedGroups) {
+    html += sectionHdrRow(`${name}의 파일 `, files.length);
+    html += files.map(rowHTML).join('');
+  }
+  tbody.innerHTML = html;
+  document.getElementById('emptyList').toggleAttribute('data-hidden', allInView.length > 0);
 
   // ── grid ──
   const grid = document.getElementById('fileGrid');
-  grid.innerHTML = filtered.map(f => `
-    <div class="grid-card">
-      ${extIconHTML(f.mime)}
-      <div class="fname">${f.name}</div>
-      <div class="fsize">${f.size}</div>
-      <div class="row-actions" style="justify-content:center">
-        <button class="btn-icon btn-dl" style="width:26px;height:26px" title="다운로드" data-action="download" data-id="${f.id}">
-          <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M4 7l3 3 3-3M1 11h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        </button>
-        <button class="btn-icon btn-share" style="width:26px;height:26px" data-action="share" data-id="${f.id}">
-          <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><circle cx="11" cy="3" r="1.8" stroke="currentColor" stroke-width="1.4"/><circle cx="3" cy="7" r="1.8" stroke="currentColor" stroke-width="1.4"/><circle cx="11" cy="11" r="1.8" stroke="currentColor" stroke-width="1.4"/><path d="M4.7 6l4-2M4.7 8l4 2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-        </button>
-        <button class="btn-icon btn-del" style="width:26px;height:26px" data-action="delete" data-id="${f.id}">
-          <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M5 4V2h4v2M4 4l.8 8h4.4l.8-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        </button>
-        <div class="dropdown-wrap">
-          <button class="btn-icon btn-more" style="width:26px;height:26px" data-action="more" data-id="g${f.id}">
-            <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="3" r="1.2" fill="currentColor"/><circle cx="7" cy="7" r="1.2" fill="currentColor"/><circle cx="7" cy="11" r="1.2" fill="currentColor"/></svg>
-          </button>
-          <div class="dropdown-menu" id="dd-g${f.id}" data-hidden style="right:auto;left:0">
-            <button data-action="perm" data-id="${f.id}">권한 수정</button>
-            <button data-action="owner" data-id="${f.id}">소유자 수정</button>
-            <div class="divider"></div>
-            <button class="danger" data-action="delete" data-id="${f.id}">삭제</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  `).join('');
-
-  document.getElementById('emptyGrid').toggleAttribute('data-hidden', filtered.length > 0);
+  let gridHtml = '';
+  if (mine.length > 0) {
+    gridHtml += `<div class="grid-section-hdr">내 파일 <span class="section-count">${mine.length}</span></div>`;
+    gridHtml += mine.map(gridCardHTML).join('');
+  }
+  for (const [name, files] of sharedGroups) {
+    gridHtml += `<div class="grid-section-hdr">${name}의 파일 <span class="section-count">${files.length}</span></div>`;
+    gridHtml += files.map(gridCardHTML).join('');
+  }
+  grid.innerHTML = gridHtml;
+  document.getElementById('emptyGrid').toggleAttribute('data-hidden', allInView.length > 0);
 
   // select-all state
   const allCb = document.getElementById('selectAll');
-  allCb.checked = filtered.length > 0 && filtered.every(f => state.selected.has(f.id));
-  allCb.indeterminate = !allCb.checked && filtered.some(f => state.selected.has(f.id));
+  allCb.checked = allInView.length > 0 && allInView.every(f => state.selected.has(f.id));
+  allCb.indeterminate = !allCb.checked && allInView.some(f => state.selected.has(f.id));
 
   updateBulkButtons();
 }
@@ -444,7 +635,13 @@ function updateBulkButtons() {
 /* ═══════════════════════════════════════════
    ACTIONS
 ═══════════════════════════════════════════ */
+let pendingDeleteIDs = [];
+
 async function deleteFiles(ids) {
+  pendingDeleteIDs = ids;
+  const msg = ids.length === 1 ? '이 파일을 정말 삭제하시겠어요?' : `${ids.length}개 파일을 정말 삭제하시겠어요?`;
+  document.getElementById('deleteModalMsg').textContent = msg;
+  openModal('deleteModal');
 }
 
 async function renderFileFliter(){
@@ -463,10 +660,22 @@ async function renderFileFliter(){
 }
 
 async function loadFiles() {
-  const data = await api.getFiles()
-  state.files = [...data.mine, ...data.shared].map(f => ({ id: f.id, name: f.original_name, size: formatBytes(f.size), mime: f.mime_type.split('/')[1], uploadedTime: f.created_at.slice(0, 10), sizeNum: f.size}))
-  document.getElementById('countAll').textContent = state.files.length
-  renderFileFliter()
+  const data = await api.getFiles();
+  const mapFile = (f, ownerName) => ({
+    id: f.id,
+    name: f.original_name,
+    size: formatBytes(f.size),
+    mime: (f.mime_type || 'application/octet-stream').split('/')[1] || 'file',
+    uploadedTime: f.uploaded_at.slice(0, 10),
+    sizeNum: f.size,
+    ownerName,
+  });
+  state.files = [
+    ...data.mine.map(f => mapFile(f, '')),
+    ...data.shared.map(f => mapFile(f, f.owner_name || '?')),
+  ];
+  document.getElementById('countAll').textContent = state.files.length;
+  renderFileFliter();
   render();
 }
 
@@ -563,8 +772,9 @@ document.getElementById('btnCreateLink').addEventListener('click', async () => {
   const deadline = new Date(document.getElementById('expireDate').value)
   const hours = Math.floor((deadline - Date.now()) / (1000 * 60 * 60))
   const password = document.getElementById('sharePassword').value
+  const title = document.getElementById('shareTitle').value
   try {
-    const {url} = await api.createShareLink(shareTargetIDs, hours, password)
+    const {url} = await api.createShareLink(shareTargetIDs, hours, password, title)
     document.getElementById('shareLinkInput').value = url
     document.getElementById('shareInputRow').removeAttribute('data-hidden')
   } catch(e) {
@@ -578,31 +788,159 @@ document.getElementById('btnShareSelected').addEventListener('click', () => {
 });
 
 /* ═══════════════════════════════════════════
-   PERMISSION MODAL
+   PERMISSION / OWNER MODAL
 ═══════════════════════════════════════════ */
-let permTarget = null;
-let permMode = 'perm';
+const PERM_BITS = [
+  { bit: 1,  label: '읽기' },
+  { bit: 2,  label: '다운로드' },
+  { bit: 4,  label: '쓰기' },
+  { bit: 8,  label: '삭제' },
+  { bit: 16, label: '관리' },
+];
 
-function openPermModal(fileId, mode) {
-  permTarget = fileId;
-  permMode = mode;
+const permUsers = new Map(); // uid -> { username, permission }
+let permFileId = null;
+let ownerFileId = null;
+let ownerSelectedUser = null;
+
+async function searchUsers(q) {
+  const res = await fetch(`/users/search?q=${encodeURIComponent(q)}`, { credentials: 'include' });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+function renderPermUserList() {
+  const container = document.getElementById('permUserList');
+  if (permUsers.size === 0) {
+    container.innerHTML = '<div style="font-size:.82rem;color:var(--text-muted)">추가된 유저 없음</div>';
+    return;
+  }
+  container.innerHTML = [...permUsers.entries()].map(([uid, { username, permission }]) => `
+    <div class="perm-user-row" data-uid="${uid}">
+      <span class="perm-username">${username}</span>
+      <div class="perm-bits">
+        ${PERM_BITS.map(({ bit, label }) => `
+          <label class="perm-bit-label">
+            <input type="checkbox" data-uid="${uid}" data-bit="${bit}" ${(permission & bit) ? 'checked' : ''}>
+            ${label}
+          </label>
+        `).join('')}
+      </div>
+      <button class="ui-remove perm-remove" data-uid="${uid}" title="제거">✕</button>
+    </div>
+  `).join('');
+}
+
+function openPermModal(fileId) {
+  permFileId = fileId;
+  permUsers.clear();
   const file = state.files.find(f => f.id === fileId);
-  document.getElementById('permModalTitle').textContent = mode === 'owner' ? '소유자 수정' : '권한 수정';
   document.getElementById('permSubtitle').textContent = file?.name || '';
-  document.getElementById('ownerField').toggleAttribute('data-hidden', mode !== 'owner');
+  document.getElementById('permUserSearch').value = '';
+  document.getElementById('permUserDropdown').setAttribute('data-hidden', '');
+  renderPermUserList();
   openModal('permModal');
 }
 
-document.getElementById('btnSavePerm').addEventListener('click', async () => {
-  if (permMode === 'owner') {
-    const email = document.getElementById('ownerEmail').value.trim();
-    if (!email) return;
-    await api.updateOwner(permTarget, email);
-  } else {
-    const level = document.getElementById('permLevel').value;
-    await api.updatePermission(permTarget, level);
+function openOwnerModal(fileId) {
+  ownerFileId = fileId;
+  ownerSelectedUser = null;
+  const file = state.files.find(f => f.id === fileId);
+  document.getElementById('ownerSubtitle').textContent = file?.name || '';
+  document.getElementById('ownerUserSearch').value = '';
+  document.getElementById('ownerUserDropdown').setAttribute('data-hidden', '');
+  document.getElementById('ownerSelectedDisplay').textContent = '';
+  openModal('ownerModal');
+}
+
+// perm user search
+let permSearchTimer = null;
+document.getElementById('permUserSearch').addEventListener('input', e => {
+  clearTimeout(permSearchTimer);
+  const q = e.target.value.trim();
+  if (!q) { document.getElementById('permUserDropdown').setAttribute('data-hidden', ''); return; }
+  permSearchTimer = setTimeout(async () => {
+    const users = await searchUsers(q);
+    const dd = document.getElementById('permUserDropdown');
+    if (!users.length) { dd.setAttribute('data-hidden', ''); return; }
+    dd.innerHTML = users.map(u => `<div class="user-dd-item" data-uid="${u.id}" data-username="${u.username}">${u.username}</div>`).join('');
+    dd.removeAttribute('data-hidden');
+  }, 300);
+});
+
+document.getElementById('permUserDropdown').addEventListener('click', e => {
+  const item = e.target.closest('.user-dd-item');
+  if (!item) return;
+  const uid = item.dataset.uid;
+  const username = item.dataset.username;
+  if (!permUsers.has(uid)) permUsers.set(uid, { username, permission: 0 });
+  document.getElementById('permUserDropdown').setAttribute('data-hidden', '');
+  document.getElementById('permUserSearch').value = '';
+  renderPermUserList();
+});
+
+document.getElementById('permUserList').addEventListener('click', e => {
+  const removeBtn = e.target.closest('.perm-remove');
+  if (removeBtn) {
+    permUsers.delete(removeBtn.dataset.uid);
+    renderPermUserList();
+    return;
   }
-  closeModal('permModal');
+  const cb = e.target.closest('input[type="checkbox"][data-uid]');
+  if (cb) {
+    const uid = cb.dataset.uid;
+    const bit = Number(cb.dataset.bit);
+    const entry = permUsers.get(uid);
+    if (!entry) return;
+    if (cb.checked) entry.permission |= bit;
+    else            entry.permission &= ~bit;
+  }
+});
+
+document.getElementById('btnSavePerm').addEventListener('click', async () => {
+  if (!permFileId || permUsers.size === 0) { closeModal('permModal'); return; }
+  const permissions = [...permUsers.entries()].map(([user_id, { permission }]) => ({ user_id, permission }));
+  try {
+    await api.updatePermission(permFileId, permissions);
+    closeModal('permModal');
+  } catch(e) {
+    alert('권한 저장 실패: ' + e.message);
+  }
+});
+
+// owner user search
+let ownerSearchTimer = null;
+document.getElementById('ownerUserSearch').addEventListener('input', e => {
+  clearTimeout(ownerSearchTimer);
+  const q = e.target.value.trim();
+  if (!q) { document.getElementById('ownerUserDropdown').setAttribute('data-hidden', ''); return; }
+  ownerSearchTimer = setTimeout(async () => {
+    const users = await searchUsers(q);
+    const dd = document.getElementById('ownerUserDropdown');
+    if (!users.length) { dd.setAttribute('data-hidden', ''); return; }
+    dd.innerHTML = users.map(u => `<div class="user-dd-item" data-uid="${u.id}" data-username="${u.username}">${u.username}</div>`).join('');
+    dd.removeAttribute('data-hidden');
+  }, 300);
+});
+
+document.getElementById('ownerUserDropdown').addEventListener('click', e => {
+  const item = e.target.closest('.user-dd-item');
+  if (!item) return;
+  ownerSelectedUser = { id: item.dataset.uid, username: item.dataset.username };
+  document.getElementById('ownerSelectedDisplay').textContent = `선택: ${ownerSelectedUser.username}`;
+  document.getElementById('ownerUserDropdown').setAttribute('data-hidden', '');
+  document.getElementById('ownerUserSearch').value = '';
+});
+
+document.getElementById('btnSaveOwner').addEventListener('click', async () => {
+  if (!ownerFileId || !ownerSelectedUser) { closeModal('ownerModal'); return; }
+  try {
+    await api.updateOwner(ownerFileId, ownerSelectedUser.id);
+    closeModal('ownerModal');
+    await loadFiles();
+  } catch(e) {
+    alert('소유자 변경 실패: ' + e.message);
+  }
 });
 
 /* ═══════════════════════════════════════════
@@ -636,11 +974,11 @@ function handleAction(action, id) {
       break;
     case 'perm':
       closeAllDropdowns();
-      openPermModal(ids, 'perm');
+      openPermModal(id);
       break;
     case 'owner':
       closeAllDropdowns();
-      openPermModal(ids, 'owner');
+      openOwnerModal(id);
       break;
     case 'more': {
       const ddId = `dd-${id}`;
@@ -678,6 +1016,18 @@ document.getElementById('selectAll').addEventListener('change', e => {
 
 document.getElementById('btnDeleteSelected').addEventListener('click', () => {
   deleteFiles([...state.selected]);
+});
+
+document.getElementById('btnConfirmDelete').addEventListener('click', async () => {
+  closeModal('deleteModal');
+  try {
+    await api.deleteFiles(pendingDeleteIDs);
+    pendingDeleteIDs.forEach(id => state.selected.delete(id));
+    updateBulkButtons();
+    await loadFiles();
+  } catch(e) {
+    alert('삭제 실패: ' + e.message);
+  }
 });
 
 document.getElementById('btnDownloadSelected').addEventListener('click', () => {
@@ -740,6 +1090,43 @@ document.getElementById('btnTheme').addEventListener('click', () => {
   document.documentElement.setAttribute('data-theme', state.theme);
   document.getElementById('iconMoon').toggleAttribute('data-hidden', state.theme === 'dark');
   document.getElementById('iconSun').toggleAttribute('data-hidden',  state.theme === 'light');
+  document.documentElement.setAttribute('data-theme', state.theme);
+  localStorage.setItem('theme', state.theme);
+});
+
+/* ═══════════════════════════════════════════
+   SHARE LINKS / GRANTED PERMS
+═══════════════════════════════════════════ */
+document.getElementById('btnNavShareLinks').addEventListener('click', async e => {
+  e.preventDefault();
+  try {
+    const items = await api.getMyShareLinks();
+    renderShareLinksList(items);
+    openModal('shareLinksModal');
+  } catch(err) {
+    alert('공유 링크 목록 로드 실패: ' + err.message);
+  }
+});
+
+document.getElementById('btnNavGrantedPerms').addEventListener('click', async e => {
+  e.preventDefault();
+  try {
+    const items = await api.getGrantedPerms();
+    renderGrantedPerms(items);
+    openModal('grantedPermsModal');
+  } catch(err) {
+    alert('권한 목록 로드 실패: ' + err.message);
+  }
+});
+
+document.getElementById('shareLinksBody').addEventListener('click', e => {
+  const btn = e.target.closest('.sli-copy');
+  if (!btn) return;
+  const url = `${window.location.origin}/share/view?token=${btn.dataset.token}`;
+  navigator.clipboard?.writeText(url).catch(() => {});
+  const orig = btn.textContent;
+  btn.textContent = '복사됨!';
+  setTimeout(() => btn.textContent = orig, 1500);
 });
 
 /* ═══════════════════════════════════════════
