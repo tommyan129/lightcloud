@@ -4,8 +4,17 @@
 
 ## 미완성 — 지금 당장
 
-- [ ] **로그아웃 버튼** — `cloud.html` 사이드바 또는 상단에 버튼 추가, `POST /logout` 연결 후 `/login` 리다이렉트
-- [ ] **파일 확장자 필터링** — `UploadFiles`에서 `.exe .bat .sh .ps1 .cmd` 업로드 시 400 반환
+- [x] **로그아웃 버튼** — 유저 메뉴 dropdown으로 이동, `POST /logout` 연결 완료
+- [x] **파일 확장자 필터링** — `blockedExts` map 정의, `UploadFiles` 루프 안에서 차단 확장자 skip (continue 방식)
+
+---
+
+## 버그
+
+- [ ] **공유 링크 modal — 이전 링크 재표시** — 새 링크 생성 시 `shareInputRow` hidden 처리 안 됨
+- [ ] **공유 링크 modal — 내용 잔류** — modal 닫혀도 제목/비밀번호/만료일 입력값 초기화 안 됨
+- [ ] **다크모드 파일 색** — `EXT_COLOR` 값이 라이트모드 기준 고정색이라 다크모드에서 파일명 안 보이는 경우 있음
+- [ ] **권한 체크박스 → radio 버튼 전환** — 상위 권한 선택 시 이하 권한 자동 부여, UI를 radio btn 구조로 변경 검토
 
 ---
 

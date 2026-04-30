@@ -20,6 +20,16 @@ import (
 
 const uploadFilesPath = "./upload"
 
+var blockedExts = map[string]bool{
+	".exe": true,
+	".bat": true,
+	".sh":  true,
+	".ps1": true,
+	".cmd": true,
+	".msi": true,
+	".vbs": true,
+}
+
 func ListFiles(w http.ResponseWriter, r *http.Request) {
 
 	response := model.FileListResponse{
@@ -104,6 +114,10 @@ func UploadFiles(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			http.Error(w, "file open failed", http.StatusInternalServerError)
 			return
+		}
+
+		if blockedExts[filepath.Ext(fileHeader.Filename)] {
+			continue //파일제외하고
 		}
 
 		newFile := model.File{

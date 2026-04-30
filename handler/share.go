@@ -36,8 +36,8 @@ func GetMyShareLinks(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := db.DB.Query(`
 		SELECT sl.Token, sl.Title, sl.CreatedAt, sl.ExpiresAt,
-		CASE WHEN sl.PasswordHash != '' AND sl.PasswordHash IS NOT NULL THEN 1 ELSE 0 END,
-		COUNT(slf.FileID)
+		       CASE WHEN sl.PasswordHash != '' AND sl.PasswordHash IS NOT NULL THEN 1 ELSE 0 END,
+		       COUNT(slf.FileID)
 		FROM share_links sl
 		LEFT JOIN share_link_files slf ON sl.Token = slf.Token
 		WHERE sl.CreatedBy = ?
