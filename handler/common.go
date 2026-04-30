@@ -54,3 +54,19 @@ func generateShareToken() string {
 	}
 	return string(resTok)
 }
+
+func AdminExists() (bool, error) {
+
+	var res int
+	err := db.DB.QueryRow("SELECT COUNT(*) FROM users WHERE Role = ?", "admin").Scan(&res)
+	if err != nil {
+		//err
+		return false, err
+	}
+
+	if res > 0 {
+		return true, nil
+	}
+
+	return false, nil
+}

@@ -129,7 +129,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		Value:    token,
 		Expires:  session.ExpiresAt,
 		HttpOnly: true,
-		Secure:   false, // TODO: 배포 시 true로 변경 (HTTPS 필요)
+		Secure:   true, // TODO: 배포 시 true로 변경 (HTTPS 필요)
 		Path:     "/",
 	})
 
@@ -160,4 +160,41 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 	})
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func SearchUsers(w http.ResponseWriter, r *http.Request) {
+	_, err := getSessionUser(r)
+	if err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	q := r.URL.Query().Get("q")
+	w.Header().Set("Content-Type", "application/json")
+	if q == "" {
+		w.Write([]byte("[]"))
+		return
+	}
+
+	rows, err := db.DB.Query("SELECT ID, Username FROM users WHERE Username LIKE ? LIMIT 10", "%"+q+"%")
+	if err != nil {
+		http.Error(w, "db error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	type userResult struct {
+		ID       string `json:"id"`
+		Username string `json:"username"`
+	}
+	var users []userResult
+	for rows.Next() {
+		var u userResult
+		rows.Scan(&u.ID, &u.Username)
+		users = append(users, u)
+	}
+	if users == nil {
+		users = []userResult{}
+	}
+	json.NewEncoder(w).Encode(users)
 }

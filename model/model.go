@@ -17,7 +17,8 @@ type File struct {
 	StoredName   string `json:"stored_name"`
 	Size         int64  `json:"size"`
 	MimeType     string `json:"mime_type"`
-	CreatedAt    string `json:"created_at"`
+	UploadedAt   string `json:"uploaded_at"`
+	OwnerName    string `json:"owner_name,omitempty"` // shared 파일에만 채워짐
 }
 
 type FileListResponse struct {
@@ -41,6 +42,7 @@ type FilePermission struct {
 
 type ShareLink struct {
 	Token        string    `json:"token"`
+	ShareTitle   string    `json:"share_title"`
 	CreatedBy    string    `json:"created_by"` //User.ID 참조
 	CreatedAt    time.Time `json:"created_at"`
 	ExpiresAt    time.Time `json:"expires_at"`
