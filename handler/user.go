@@ -3,6 +3,7 @@ package handler
 import (
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
@@ -26,25 +27,26 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	}
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		http.Error(w, "failed to decode request", http.StatusBadRequest)
 		return
 	}
 
 	if req.Username == "" || req.Password == "" {
-		w.WriteHeader(http.StatusBadRequest) // 400
+		http.Error(w, "failed to validate request", http.StatusBadRequest)
 		return
 	}
 
 	err = db.DB.QueryRow("SELECT ID FROM users WHERE Username = ?", req.Username).Scan(&existingID)
 	if err == nil {
-		w.WriteHeader(http.StatusConflict) // 409
+		http.Error(w, "failed to register: username already exists", http.StatusConflict)
 		return
 	}
 
 	if err == sql.ErrNoRows {
 		hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
+			log.Printf("[Register] bcrypt: %v", err)
+			http.Error(w, "failed to hash password", http.StatusInternalServerError)
 			return
 		}
 
@@ -60,7 +62,8 @@ func Register(w http.ResponseWriter, r *http.Request) {
 			"INSERT INTO users (ID, Username, Role, PasswordHash, CreatedAt) VALUES (?, ?, ?, ?, ?)", user.ID, user.Username, user.Role, user.PasswordHash, user.CreatedAt.Format(time.RFC3339),
 		)
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
+			log.Printf("[Register] users INSERT: %v", err)
+			http.Error(w, "failed to register user", http.StatusInternalServerError)
 			return
 		}
 
@@ -81,26 +84,30 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		Username string `json:"username"`
 		Password string `json:"password"`
 	}
-	json.NewDecoder(r.Body).Decode(&req)
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, "failed to decode request", http.StatusBadRequest)
+		return
+	}
 
 	if req.Username == "" || req.Password == "" {
-		w.WriteHeader(http.StatusBadRequest) // 400
+		http.Error(w, "failed to validate request", http.StatusBadRequest)
 		return
 	}
 
 	var user model.User
 
-	err := db.DB.QueryRow(
+	err = db.DB.QueryRow(
 		"SELECT ID, PasswordHash FROM users WHERE Username = ?", req.Username,
 	).Scan(&user.ID, &user.PasswordHash)
 	if err == sql.ErrNoRows {
-		w.WriteHeader(http.StatusUnauthorized) // 401
+		http.Error(w, "failed to authenticate", http.StatusUnauthorized)
 		return
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password))
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized) // 401 - 비번 틀림
+		http.Error(w, "failed to authenticate", http.StatusUnauthorized)
 		return
 	}
 
@@ -120,7 +127,8 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		session.CreatedAt.Format(time.RFC3339),
 	)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		log.Printf("[Login] sessions INSERT: %v", err)
+		http.Error(w, "failed to create session", http.StatusInternalServerError)
 		return
 	}
 
@@ -141,14 +149,15 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 
 	cookie, err := r.Cookie("session")
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
+		http.Error(w, "failed to authenticate", http.StatusUnauthorized)
 		return
 	}
 	token := cookie.Value
 
 	_, err = db.DB.Exec("DELETE FROM sessions WHERE Token = ?", token)
 	if err != nil {
-		w.WriteHeader(http.StatusOK) //로그 아웃이니 세션 없으니 ㅇㅋ 니 로그인으로 돌아가라 시전
+		log.Printf("[Logout] sessions DELETE: %v", err)
+		w.WriteHeader(http.StatusOK)
 		return
 	}
 
@@ -165,7 +174,7 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 func SearchUsers(w http.ResponseWriter, r *http.Request) {
 	_, err := getSessionUser(r)
 	if err != nil {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		http.Error(w, "failed to authenticate", http.StatusUnauthorized)
 		return
 	}
 
@@ -178,7 +187,8 @@ func SearchUsers(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := db.DB.Query("SELECT ID, Username FROM users WHERE Username LIKE ? LIMIT 10", "%"+q+"%")
 	if err != nil {
-		http.Error(w, "db error", http.StatusInternalServerError)
+		log.Printf("[SearchUsers] query: %v", err)
+		http.Error(w, "failed to search users", http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()

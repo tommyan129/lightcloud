@@ -16,6 +16,14 @@
 - [ ] **다크모드 파일 색** — `EXT_COLOR` 값이 라이트모드 기준 고정색이라 다크모드에서 파일명 안 보이는 경우 있음
 - [ ] **권한 체크박스 → radio 버튼 전환** — 상위 권한 선택 시 이하 권한 자동 부여, UI를 radio btn 구조로 변경 검토
 
+## 코드 품질 — checklist.md 기반
+
+- [ ] **A — share.go `tx.Commit()` 에러 미처리** — `tx.Commit()` 반환값 무시, 실패해도 성공 응답 내보냄
+- [ ] **B — share.go Rollback 누락** — 트랜잭션 에러 경로에서 `tx.Rollback()` 없는 곳 있음 → 트랜잭션 열자마자 `defer tx.Rollback()` 추가
+- [ ] **C — user.go Login JSON Decode 에러 무시** — Register는 에러 체크, Login은 안 함 → 통일
+- [ ] **D — file.go rows.Close() 이중 호출** — `defer rows.Close()` + 명시적 호출 중복 → 명시적 호출 제거
+- [ ] **E — main.go 포트 하드코딩** — `":8080"` 리터럴 → `const port = ":8080"` 상수화
+
 ---
 
 ## cloud.html — 완료

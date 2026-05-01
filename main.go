@@ -6,6 +6,8 @@ import (
 	"net/http"
 )
 
+const port = ":8080"
+
 func main() {
 	db.DBInit()
 
@@ -45,5 +47,5 @@ func main() {
 		}
 
 	})
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(port, nil)
 }
