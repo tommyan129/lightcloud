@@ -21,7 +21,7 @@ import (
 func GetMyShareLinks(w http.ResponseWriter, r *http.Request) {
 	nowUser, err := getSessionUser(r)
 	if err != nil {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		http.Error(w, "failed to authenticate", http.StatusUnauthorized)
 		return
 	}
 
@@ -44,7 +44,8 @@ func GetMyShareLinks(w http.ResponseWriter, r *http.Request) {
 		GROUP BY sl.Token
 		ORDER BY sl.CreatedAt DESC`, nowUser)
 	if err != nil {
-		http.Error(w, "db error", http.StatusInternalServerError)
+		log.Printf("[GetMyShareLinks] query: %v", err)
+		http.Error(w, "failed to query share links", http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
@@ -68,7 +69,7 @@ func CreateShareLink(w http.ResponseWriter, r *http.Request) {
 
 	nowUser, err := getSessionUser(r)
 	if err != nil {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		http.Error(w, "failed to authenticate", http.StatusUnauthorized)
 		return
 	}
 
@@ -81,7 +82,7 @@ func CreateShareLink(w http.ResponseWriter, r *http.Request) {
 
 	err = json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest) //400
+		http.Error(w, "failed to decode request", http.StatusBadRequest)
 		return
 	}
 
@@ -98,7 +99,8 @@ func CreateShareLink(w http.ResponseWriter, r *http.Request) {
 	if req.Password != "" {
 		hash, err = bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
+			log.Printf("[CreateShareLink] bcrypt: %v", err)
+			http.Error(w, "failed to hash password", http.StatusInternalServerError)
 			return
 		}
 	}
@@ -114,39 +116,46 @@ func CreateShareLink(w http.ResponseWriter, r *http.Request) {
 
 	tx, err := db.DB.Begin()
 	if err != nil {
+		log.Printf("[CreateShareLink] begin tx: %v", err)
 		http.Error(w, "failed to start tx", http.StatusInternalServerError)
 		return
 	}
+	defer tx.Rollback()
 
 	_, err = tx.Exec("INSERT INTO share_links (Token, Title, CreatedAt, CreatedBy, ExpiresAt, PasswordHash) VALUES (?, ?, ?, ?, ?, ?)", sharelink.Token, sharelink.ShareTitle, sharelink.CreatedAt.Format(time.RFC3339), sharelink.CreatedBy, sharelink.ExpiresAt.Format(time.RFC3339), sharelink.PasswordHash)
 	if err != nil {
-		tx.Rollback()
-		w.WriteHeader(http.StatusInternalServerError)
+		log.Printf("[CreateShareLink] share_links INSERT: %v", err)
+		http.Error(w, "failed to create share link", http.StatusInternalServerError)
 		return
 	}
 
 	for _, id := range req.FileIDs {
 		var p int
 
-		err = db.DB.QueryRow("SELECT Permission FROM file_permissions WHERE UserID = ? AND FileID = ?", nowUser, id).Scan(&p)
+		err = tx.QueryRow("SELECT Permission FROM file_permissions WHERE UserID = ? AND FileID = ?", nowUser, id).Scan(&p)
 		if err == sql.ErrNoRows {
-			log.Printf("share: permission denied user=%s file=%s", nowUser, id)
+			log.Printf("[CreateShareLink] permission denied user=%s file=%s", nowUser, id)
 			continue
 		}
 		if (p & model.PermDownload) == 0 {
-			log.Printf("share: permission denied user=%s file=%s", nowUser, id)
+			log.Printf("[CreateShareLink] permission denied user=%s file=%s", nowUser, id)
 			continue
 		}
 
 		_, err = tx.Exec("INSERT INTO share_link_files (Token, FileID) VALUES (?, ?)", sharelink.Token, id)
 		if err != nil {
-			tx.Rollback()
-			w.WriteHeader(http.StatusInternalServerError)
+			log.Printf("[CreateShareLink] share_link_files INSERT [%s]: %v", id, err)
+			http.Error(w, "failed to create share link files", http.StatusInternalServerError)
 			return
 		}
 	}
 
-	tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		log.Printf("[CreateShareLink] commit tx: %v", err)
+		http.Error(w, "failed to commit transaction", http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -182,7 +191,7 @@ func ShareInfo(w http.ResponseWriter, r *http.Request) {
 
 	token := r.URL.Query().Get("token")
 	if token == "" {
-		w.WriteHeader(http.StatusBadRequest)
+		http.Error(w, "failed to find token param", http.StatusBadRequest)
 		return
 	}
 
@@ -195,13 +204,14 @@ func ShareInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		log.Printf("[ShareInfo] share_links query [%s]: %v", token, err)
+		http.Error(w, "failed to query share link", http.StatusInternalServerError)
 		return
 	}
 
 	sharelink.ExpiresAt, _ = time.Parse(time.RFC3339, expiresAtStr)
 	if time.Now().After(sharelink.ExpiresAt) {
-		w.WriteHeader(http.StatusGone)
+		http.Error(w, "share link expired", http.StatusGone)
 		return
 	}
 
@@ -236,8 +246,8 @@ func ShareInfo(w http.ResponseWriter, r *http.Request) {
 
 			data, err := json.Marshal(&resp)
 			if err != nil {
-				log.Printf("JSON 직렬화 실패: %v", err)
-				http.Error(w, "json encode failed", http.StatusInternalServerError)
+				log.Printf("[ShareInfo] json marshal: %v", err)
+				http.Error(w, "failed to encode response", http.StatusInternalServerError)
 				return
 			}
 			w.Header().Set("Content-Type", "application/json")
@@ -251,18 +261,18 @@ func ShareInfo(w http.ResponseWriter, r *http.Request) {
 		}
 		err = json.NewDecoder(r.Body).Decode(&req)
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
+			http.Error(w, "failed to decode request", http.StatusBadRequest)
 			return
 		}
 
 		if req.Password == "" {
-			w.WriteHeader(http.StatusBadRequest)
+			http.Error(w, "failed to find password in request", http.StatusBadRequest)
 			return
 		}
 
 		err = bcrypt.CompareHashAndPassword([]byte(sharelink.PasswordHash), []byte(req.Password))
 		if err != nil {
-			w.WriteHeader(http.StatusUnauthorized) // 401 - 비번 틀림
+			http.Error(w, "failed to authenticate", http.StatusUnauthorized)
 			return
 		}
 
@@ -280,7 +290,8 @@ func ShareInfo(w http.ResponseWriter, r *http.Request) {
 
 		_, err = db.DB.Exec("INSERT INTO share_sessions (ShareLinkToken, Token, ExpiresAt) VALUES (?, ?, ?) ", session.ShareLinkToken, session.Token, session.ExpiresAt.Format(time.RFC3339))
 		if err != nil {
-			//err
+			log.Printf("[ShareInfo] share_sessions INSERT: %v", err)
+			http.Error(w, "failed to create share session", http.StatusInternalServerError)
 			return
 		}
 
@@ -309,8 +320,8 @@ func ShareInfo(w http.ResponseWriter, r *http.Request) {
 
 		data, err := json.Marshal(&resp)
 		if err != nil {
-			log.Printf("JSON 직렬화 실패: %v", err)
-			http.Error(w, "json encode failed", http.StatusInternalServerError)
+			log.Printf("[ShareInfo] json marshal: %v", err)
+			http.Error(w, "failed to encode response", http.StatusInternalServerError)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -318,7 +329,7 @@ func ShareInfo(w http.ResponseWriter, r *http.Request) {
 		w.Write(data)
 		return
 	default:
-		w.WriteHeader(http.StatusMethodNotAllowed)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
@@ -330,7 +341,7 @@ func DownloadShareFiles(w http.ResponseWriter, r *http.Request) {
 
 	filetoken := r.URL.Query().Get("token")
 	if filetoken == "" {
-		w.WriteHeader(http.StatusBadRequest)
+		http.Error(w, "failed to find token param", http.StatusBadRequest)
 		return
 	}
 
@@ -344,21 +355,22 @@ func DownloadShareFiles(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		log.Printf("[DownloadShareFiles] share_links query [%s]: %v", filetoken, err)
+		http.Error(w, "failed to query share link", http.StatusInternalServerError)
 		return
 	}
 
 	sharelink.ExpiresAt, _ = time.Parse(time.RFC3339, expiresAt_sharelink)
 
 	if time.Now().After(sharelink.ExpiresAt) {
-		w.WriteHeader(http.StatusNotFound)
+		http.Error(w, "share link expired", http.StatusGone)
 		return
 	}
 
 	if hash != "" {
 		cookie, err := r.Cookie("share_session")
 		if err != nil {
-			w.WriteHeader(http.StatusUnauthorized)
+			http.Error(w, "failed to authenticate", http.StatusUnauthorized)
 			return
 		}
 		token := cookie.Value
@@ -366,7 +378,7 @@ func DownloadShareFiles(w http.ResponseWriter, r *http.Request) {
 		var expiresAt_sharesession string
 		err = db.DB.QueryRow("SELECT ExpiresAt FROM share_sessions WHERE Token = ? AND ShareLinkToken = ?", token, filetoken).Scan(&expiresAt_sharesession)
 		if err != nil {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			http.Error(w, "failed to authenticate", http.StatusUnauthorized)
 			return
 		}
 
@@ -374,7 +386,8 @@ func DownloadShareFiles(w http.ResponseWriter, r *http.Request) {
 		if time.Now().After(shareSession.ExpiresAt) {
 			_, err = db.DB.Exec("DELETE FROM share_sessions WHERE Token = ?", token)
 			if err != nil {
-				http.Error(w, "failed to delete sharelinksession token", http.StatusInternalServerError)
+				log.Printf("[DownloadShareFiles] share_sessions DELETE [%s]: %v", token, err)
+				http.Error(w, "failed to delete share session", http.StatusInternalServerError)
 				return
 			}
 			http.SetCookie(w, &http.Cookie{
@@ -383,20 +396,21 @@ func DownloadShareFiles(w http.ResponseWriter, r *http.Request) {
 				Expires: time.Unix(0, 0),
 				Path:    "/",
 			})
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			http.Error(w, "failed to authenticate", http.StatusUnauthorized)
 			return
 		}
 	}
 
 	getFileIDs := r.URL.Query()["ids"]
 	if len(getFileIDs) == 0 {
-		http.Error(w, "emptyIDs", http.StatusBadRequest)
+		http.Error(w, "failed to find file ids in request", http.StatusBadRequest)
 		return
 	}
 
 	rows, err := db.DB.Query("SELECT FileID FROM share_link_files WHERE Token = ?", filetoken)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		log.Printf("[DownloadShareFiles] share_link_files query [%s]: %v", filetoken, err)
+		http.Error(w, "failed to query share link files", http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
@@ -407,7 +421,8 @@ func DownloadShareFiles(w http.ResponseWriter, r *http.Request) {
 		var id string
 		err = rows.Scan(&id)
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
+			log.Printf("[DownloadShareFiles] share_link_files scan: %v", err)
+			http.Error(w, "failed to read share link files", http.StatusInternalServerError)
 			return
 		}
 		vaildIDs[id] = true
@@ -431,14 +446,14 @@ func DownloadShareFiles(w http.ResponseWriter, r *http.Request) {
 		file.ID = getFileIDs[0]
 		err = db.DB.QueryRow("SELECT OwnerID, OriginalName, StoredName, Size, MimeType FROM files WHERE ID = ?", file.ID).Scan(&file.OwnerID, &file.OriginalName, &file.StoredName, &file.Size, &file.MimeType)
 		if err != nil {
-			http.Error(w, "cant find file", http.StatusNotFound)
+			http.Error(w, "failed to find file", http.StatusNotFound)
 			return
 		}
 
 		getFile, err := os.Open(filepath.Join(uploadFilesPath, file.StoredName))
 		if err != nil {
-			log.Printf("파일 열기 실패 [%s]: %v", file.StoredName, err)
-			http.Error(w, "file open failed", http.StatusInternalServerError)
+			log.Printf("[DownloadShareFiles] file open [%s]: %v", file.StoredName, err)
+			http.Error(w, "failed to open file", http.StatusInternalServerError)
 			return
 		}
 		defer getFile.Close()
@@ -446,10 +461,10 @@ func DownloadShareFiles(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", file.MimeType)
 		w.Header().Set("Content-Disposition", "attachment; filename=\""+file.OriginalName+"\"")
 
-		_, err = io.Copy(w, getFile) //여기도 다운로드 현황 브라우져에서 자동으로 띄워주니 상관없나?
+		_, err = io.Copy(w, getFile)
 		if err != nil {
-			log.Printf("파일 전송 실패 [%s]: %v", file.StoredName, err)
-			http.Error(w, "file send failed", http.StatusInternalServerError)
+			log.Printf("[DownloadShareFiles] file send [%s]: %v", file.StoredName, err)
+			http.Error(w, "failed to send file", http.StatusInternalServerError)
 			return
 		}
 
@@ -465,29 +480,29 @@ func DownloadShareFiles(w http.ResponseWriter, r *http.Request) {
 		for _, id := range getFileIDs {
 			err = db.DB.QueryRow("SELECT OwnerID, OriginalName, StoredName, Size, MimeType FROM files WHERE ID = ?", id).Scan(&file.OwnerID, &file.OriginalName, &file.StoredName, &file.Size, &file.MimeType)
 			if err != nil {
-				http.Error(w, "cant find file", http.StatusNotFound)
+				http.Error(w, "failed to find file", http.StatusNotFound)
 				return
 			}
 
 			getFile, err := os.Open(filepath.Join(uploadFilesPath, file.StoredName))
 			if err != nil {
-				log.Printf("파일 열기 실패 [%s]: %v", file.StoredName, err)
-				http.Error(w, "file open failed", http.StatusInternalServerError)
+				log.Printf("[DownloadShareFiles] file open [%s]: %v", file.StoredName, err)
+				http.Error(w, "failed to open file", http.StatusInternalServerError)
 				return
 			}
 
 			entry, err := zipWriter.Create(file.OriginalName)
 			if err != nil {
-				log.Printf("zip 항목 생성 실패 [%s]: %v", file.OriginalName, err)
+				log.Printf("[DownloadShareFiles] zip entry create [%s]: %v", file.OriginalName, err)
 				getFile.Close()
 				zipWriter.Close()
 				return
 			}
 
-			_, err = io.Copy(entry, getFile) //여기도 다운로드 현황 브라우져에서 자동으로 띄워주니 상관없나?
+			_, err = io.Copy(entry, getFile)
 			if err != nil {
-				log.Printf("파일 전송 실패 [%s]: %v", file.StoredName, err)
-				http.Error(w, "file send failed", http.StatusInternalServerError)
+				log.Printf("[DownloadShareFiles] file send [%s]: %v", file.StoredName, err)
+				http.Error(w, "failed to send file", http.StatusInternalServerError)
 				getFile.Close()
 				return
 			}
