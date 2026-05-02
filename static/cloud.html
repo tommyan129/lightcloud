@@ -22,7 +22,7 @@
           <path d="M7 1C4.2 1 2 3.2 2 6c-1.1 0-2 .9-2 2s.9 2 2 2h10c1.1 0 2-.9 2-2s-.9-2-2-2c0-2.8-2.2-5-5-5z" fill="white"/>
         </svg>
       </div>
-      CloudFiles
+      <span id="logoText">CloudFiles</span>
     </div>
 
     <div class="upload-wrap">
@@ -44,8 +44,8 @@
 
     <div class="sidebar-footer">
       <div class="storage">
-        <div>48.2 GB / 100 GB</div>
-        <div class="storage-bar"><div class="storage-fill"></div></div>
+        <div id="storageText">…</div>
+        <div class="storage-bar"><div class="storage-fill" id="storageFill" style="width:0%"></div></div>
       </div>
       <div class="sidebar-user-wrap">
         <div class="user-dropdown-menu" id="userDropdown" data-hidden>
@@ -1169,6 +1169,21 @@ document.getElementById('shareLinksBody').addEventListener('click', e => {
 /* ═══════════════════════════════════════════
    INIT
 ═══════════════════════════════════════════ */
+async function loadServerInfo() {
+  try {
+    const [settings, disk] = await Promise.all([
+      fetch('/settings', {credentials: 'include'}).then(r => r.json()),
+      fetch('/disk',     {credentials: 'include'}).then(r => r.json()),
+    ]);
+    document.getElementById('logoText').textContent = settings.server_name;
+    const used = disk.total - disk.free;
+    const pct  = disk.total > 0 ? (used / disk.total * 100) : 0;
+    document.getElementById('storageText').textContent =
+      `${formatBytes(disk.free)} 남음 / ${formatBytes(disk.total)}`;
+    document.getElementById('storageFill').style.width = `${Math.min(pct, 100).toFixed(1)}%`;
+  } catch(e) { console.error('[loadServerInfo]', e); }
+}
+
 if (window.innerWidth <= 640) {
   state.view = 'grid';
   document.getElementById('listView').setAttribute('data-hidden', '');
@@ -1177,4 +1192,5 @@ if (window.innerWidth <= 640) {
   document.getElementById('btnList').classList.remove('active');
 }
 loadFiles();
+loadServerInfo();
 </script>

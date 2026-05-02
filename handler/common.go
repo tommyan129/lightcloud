@@ -2,10 +2,12 @@ package handler
 
 import (
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"lightcloud/db"
 	"log"
 	"net/http"
+	"syscall"
 	"time"
 )
 
@@ -53,6 +55,41 @@ func generateShareToken() string {
 		resTok = append(resTok, base62Chars[t%62])
 	}
 	return string(resTok)
+}
+
+func GetSettings(w http.ResponseWriter, r *http.Request) {
+	_, err := getSessionUser(r)
+	if err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	var name string
+	err = db.DB.QueryRow("SELECT Value FROM server_settings WHERE Key = 'server_name'").Scan(&name)
+	if err != nil {
+		http.Error(w, "failed to get settings", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"server_name": name})
+}
+
+func GetDiskInfo(w http.ResponseWriter, r *http.Request) {
+	_, err := getSessionUser(r)
+	if err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	var stat syscall.Statfs_t
+	if err := syscall.Statfs("upload", &stat); err != nil {
+		log.Printf("[GetDiskInfo] Statfs: %v", err)
+		http.Error(w, "failed to get disk info", http.StatusInternalServerError)
+		return
+	}
+	bsize := uint64(stat.Bsize)
+	total := stat.Blocks * bsize
+	free := stat.Bavail * bsize
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]uint64{"total": total, "free": free})
 }
 
 func AdminExists() (bool, error) {

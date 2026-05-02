@@ -4,7 +4,7 @@
 ═══════════════════════════════════════════ */
 @font-face {
   font-family: 'Pretendard';
-  src: url('/static/fonts/Pretendard-Regular.ttf') format('truetype');
+  src: url('/static/fonts/Pretendard-Regular.otf') format('opentype');
   font-weight: 400;
 }
 :root {
