@@ -33,6 +33,8 @@ func main() {
 	http.HandleFunc("/perm/granted", handler.GetGrantedPerms)
 	http.HandleFunc("/perm", handler.UpdatePerm)
 	http.HandleFunc("/owner", handler.UpdateOwner)
+	http.HandleFunc("/settings", handler.GetSettings)
+	http.HandleFunc("/disk", handler.GetDiskInfo)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		existAdmin, err := handler.AdminExists()
