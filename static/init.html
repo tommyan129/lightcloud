@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>초기 설정 — CloudFiles</title>
+<title>초기 설정 — LightCloud</title>
 <link rel="stylesheet" href="/static/css/lightcloud.css">
 <script>
     const saved = localStorage.getItem('theme');
@@ -126,7 +126,7 @@ body {
           <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
             <path d="M7 1C4.2 1 2 3.2 2 6c-1.1 0-2 .9-2 2s.9 2 2 2h10c1.1 0 2-.9 2-2s-.9-2-2-2c0-2.8-2.2-5-5-5z" fill="currentColor"/>
           </svg>
-          <span id="server_name_preview">CloudFiles</span>
+          <span id="server_name_preview">LightCloud</span>
         </div>
       </div>
 
@@ -204,7 +204,7 @@ document.getElementById('btnTheme').addEventListener('click', () => {
 /* ── 클라우드 이름 미리보기 ── */
 document.getElementById('server_name').addEventListener('input', function() {
   const val = this.value.trim();
-  document.getElementById('server_name_preview').textContent = val || 'CloudFiles';
+  document.getElementById('server_name_preview').textContent = val || 'LightCloud';
 });
 
 /* ── 비밀번호 강도 ── */
@@ -254,7 +254,7 @@ document.getElementById('re_password').addEventListener('input', function() {
 document.getElementById('setup-form').addEventListener('submit', function(e) {
   e.preventDefault();
 
-  const server_name  = document.getElementById('server_name').value.trim() || 'CloudFiles';
+  const server_name  = document.getElementById('server_name').value.trim() || 'LightCloud';
   const username   = document.getElementById('username').value;
   const password   = document.getElementById('password').value;
   const re_password = document.getElementById('re_password').value;

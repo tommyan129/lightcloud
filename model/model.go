@@ -12,13 +12,22 @@ type User struct {
 
 type File struct {
 	ID           string `json:"id"`
-	OwnerID      string `json:"owner_id"` //User.ID 참조
+	OwnerID      string `json:"owner_id"`  //User.ID 참조
+	FolderId     string `json:"folder_id"` //Folder.ID 참조
 	OriginalName string `json:"original_name"`
 	StoredName   string `json:"stored_name"`
 	Size         int64  `json:"size"`
 	MimeType     string `json:"mime_type"`
 	UploadedAt   string `json:"uploaded_at"`
 	OwnerName    string `json:"owner_name,omitempty"` // shared 파일에만 채워짐
+}
+
+type Folder struct {
+	ID        string    `json:"id"`
+	OwnerID   string    `json:"owner_id"`
+	ParentID  string    `json:"parent_id"`
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type FileListResponse struct {

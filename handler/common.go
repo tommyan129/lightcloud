@@ -57,6 +57,21 @@ func generateShareToken() string {
 	return string(resTok)
 }
 
+func GetMe(w http.ResponseWriter, r *http.Request) {
+	userID, err := getSessionUser(r)
+	if err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	var username, role string
+	if err = db.DB.QueryRow("SELECT Username, Role FROM users WHERE ID = ?", userID).Scan(&username, &role); err != nil {
+		http.Error(w, "user not found", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"id": userID, "username": username, "role": role})
+}
+
 func GetSettings(w http.ResponseWriter, r *http.Request) {
 	_, err := getSessionUser(r)
 	if err != nil {
@@ -79,8 +94,9 @@ func GetDiskInfo(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	var stat syscall.Statfs_t
-	if err := syscall.Statfs("upload", &stat); err != nil {
+	var stat syscall.Statfs_t // wsl 환경에선 작동함 문제 없음 window 기준이라 오류 뜨는것
+	err = syscall.Statfs("upload", &stat)
+	if err != nil {
 		log.Printf("[GetDiskInfo] Statfs: %v", err)
 		http.Error(w, "failed to get disk info", http.StatusInternalServerError)
 		return

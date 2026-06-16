@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CloudFiles</title>
+<title>LightCloud</title>
 <link rel="stylesheet" href="/static/css/lightcloud.css">
 <script>
     const saved = localStorage.getItem('theme');
@@ -22,7 +22,7 @@
           <path d="M7 1C4.2 1 2 3.2 2 6c-1.1 0-2 .9-2 2s.9 2 2 2h10c1.1 0 2-.9 2-2s-.9-2-2-2c0-2.8-2.2-5-5-5z" fill="white"/>
         </svg>
       </div>
-      <span id="logoText">CloudFiles</span>
+      <span id="logoText">LightCloud</span>
     </div>
 
     <div class="upload-wrap">
@@ -34,7 +34,12 @@
       </button>
     </div>
 
-    <div class="nav-label">Folders</div>
+    <div class="nav-label nav-folder-hdr">
+      Folders
+      <button class="btn-icon btn-more" id="btnFolderModal" title="폴더 추가/삭제" style="width:18px;height:18px;margin-left:auto;flex-shrink:0">
+        <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </button>
+    </div>
     <nav id="folderNav">
       <a href="#" class="nav-link active" data-folder="">
         <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M2 5h5l2 2h9v10H2z" fill="currentColor" opacity=".2" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
@@ -56,6 +61,10 @@
           <button id="btnMenuGrantedPerms">
             <svg width="13" height="13" viewBox="0 0 20 20" fill="none"><rect x="4" y="9" width="12" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M7 9V7a3 3 0 1 1 6 0v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
             권한 목록
+          </button>
+          <button id="btnMenuAdmin" data-hidden>
+            <svg width="13" height="13" viewBox="0 0 20 20" fill="none"><path d="M10 2l1.8 3.6L16 6.2l-3 2.9.7 4.1L10 11l-3.7 2.2.7-4.1-3-2.9 4.2-.6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+            어드민
           </button>
           <div class="divider"></div>
           <button class="danger" id="btnLogout">
@@ -109,6 +118,10 @@
       <button class="btn btn-danger-outline" id="btnDeleteSelected" data-hidden>
         <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M5 4V2h4v2M4 4l.8 8h4.4l.8-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         삭제 <span id="deleteCount">0</span>
+      </button>
+      <button class="btn btn-outline" id="btnMoveSelected" data-hidden>
+        <svg width="13" height="13" viewBox="0 0 20 20" fill="none"><path d="M2 5h5l2 2h9v10H2z" fill="currentColor" opacity=".2" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        이동 <span id="moveCount">0</span>
       </button>
       <button class="btn btn-outline" id="btnDownloadSelected" data-hidden>
         <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 2v7M4 6l3 3 3-3M2 11h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -276,6 +289,56 @@
   </div>
 </div>
 
+<!-- ════ MOVE MODAL ════ -->
+<div class="modal-backdrop" id="moveModal" data-hidden>
+  <div class="modal" style="max-width:320px">
+    <div class="modal-header">
+      <h4>폴더로 이동</h4>
+      <button class="modal-close" data-close="moveModal">✕</button>
+    </div>
+    <p class="modal-subtitle" id="moveSubtitle"></p>
+    <div class="modal-field">
+      <select class="modal-input" id="moveFolderSelect"></select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" data-close="moveModal">취소</button>
+      <button class="btn btn-primary" id="btnConfirmMove">이동</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ FOLDER MODAL ════ -->
+<div class="modal-backdrop" id="folderModal" data-hidden>
+  <div class="modal" style="max-width:360px">
+    <div class="modal-header">
+      <h4>폴더 관리</h4>
+      <button class="modal-close" data-close="folderModal">✕</button>
+    </div>
+    <div class="view-toggle" style="width:100%;margin-bottom:.75rem">
+      <button class="btn-icon folder-tab active" data-tab="add" style="flex:1;width:auto">추가</button>
+      <button class="btn-icon folder-tab" data-tab="del" style="flex:1;width:auto">삭제</button>
+    </div>
+    <div id="folderTabAdd">
+      <div class="modal-field" style="margin-top:.6rem">
+        <input type="text" class="modal-input" id="folderNameInput" placeholder="폴더 이름">
+      </div>
+      <div class="modal-field">
+        <select class="modal-input" id="folderParentSelect"></select>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close="folderModal">취소</button>
+        <button class="btn btn-primary" id="btnCreateFolder">만들기</button>
+      </div>
+    </div>
+    <div id="folderTabDel" data-hidden>
+      <div id="folderDeleteList" style="display:flex;flex-direction:column;gap:.35rem;margin:.6rem 0;max-height:240px;overflow-y:auto"></div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close="folderModal">닫기</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ════ GRANTED PERMS MODAL ════ -->
 <div class="modal-backdrop" id="grantedPermsModal" data-hidden>
   <div class="modal" style="max-width:520px">
@@ -356,6 +419,42 @@ const api = {
     return res.json();
   },
 
+  async getFolders() {
+    const res = await fetch('/folders', {credentials: 'include'});
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  async createFolder(name, parent_id) {
+    const res = await fetch('/folders/create', {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name, parent_id})
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  async deleteFolder(folder_id) {
+    const res = await fetch('/folders/delete', {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({folder_id})
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  async moveFiles(file_ids, folder_id) {
+    const res = await fetch('/files/move', {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({file_ids, folder_id})
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
   /** POST /files/:id/share → returns share URL */
   async createShareLink(ids, hours, password, title) {
     const res = await fetch('/share/create',{
@@ -389,6 +488,7 @@ const EXT_COLOR = {
 ═══════════════════════════════════════════ */
 const state = {
   files: [],
+  folders: [],
   search: '',
   folder: '',
   mime: '',
@@ -426,7 +526,11 @@ function extIconHTML(mime) {
 
 function getFiltered() {
   return state.files.filter(f => {
-    if (state.folder && f.folder !== state.folder) return false;
+    if (state.folder === '__shared__') return !!f.ownerName;
+    if (state.folder) {
+      if (f.ownerName) return false;
+      if (f.folder !== state.folder) return false;
+    }
     if (state.mime   && f.mime   !== state.mime)   return false;
     if (state.search && !f.name.toLowerCase().includes(state.search.toLowerCase())) return false;
     return true;
@@ -644,6 +748,8 @@ function updateBulkButtons() {
   document.getElementById('deleteCount').textContent = n;
   document.getElementById('btnDownloadSelected').toggleAttribute('data-hidden', n === 0);
   document.getElementById('downloadCount').textContent = n;
+  document.getElementById('btnMoveSelected').toggleAttribute('data-hidden', n === 0);
+  document.getElementById('moveCount').textContent = n;
 }
 
 /* ═══════════════════════════════════════════
@@ -682,6 +788,7 @@ async function loadFiles() {
     mime: (f.mime_type || 'application/octet-stream').split('/')[1] || 'file',
     uploadedTime: f.uploaded_at.slice(0, 10),
     sizeNum: f.size,
+    folder: f.folder_id || '',
     ownerName,
   });
   state.files = [
@@ -906,8 +1013,15 @@ document.getElementById('permUserList').addEventListener('click', e => {
     const bit = Number(cb.dataset.bit);
     const entry = permUsers.get(uid);
     if (!entry) return;
-    if (cb.checked) entry.permission |= bit;
-    else            entry.permission &= ~bit;
+    const idx = PERM_BITS.findIndex(p => p.bit === bit);
+    if (cb.checked) {
+      // 상위 권한 체크 → 이하 전부 켜기
+      for (let i = 0; i <= idx; i++) entry.permission |= PERM_BITS[i].bit;
+    } else {
+      // 하위 권한 해제 → 이상 전부 끄기
+      for (let i = idx; i < PERM_BITS.length; i++) entry.permission &= ~PERM_BITS[i].bit;
+    }
+    renderPermUserList();
   }
 });
 
@@ -1051,6 +1165,152 @@ document.getElementById('btnDownloadSelected').addEventListener('click', () => {
   });
 
 /* ═══════════════════════════════════════════
+   FOLDER NAV
+═══════════════════════════════════════════ */
+const FOLDER_SVG = `<svg width="13" height="13" viewBox="0 0 20 20" fill="none"><path d="M2 5h5l2 2h9v10H2z" fill="currentColor" opacity=".2" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>`;
+const CHILD_SVG  = `<svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M4 3v5h5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 6l2 2-2 2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+function buildFolderTree(folders) {
+  const map = new Map(folders.map(f => [f.id, {...f, children: []}]));
+  const roots = [];
+  for (const f of map.values()) {
+    f.parent_id ? map.get(f.parent_id)?.children.push(f) : roots.push(f);
+  }
+  return roots;
+}
+
+function folderNodeHTML(node, depth) {
+  const pad = depth >= 2 ? 32 : 20 + depth * 12;
+  const icon = depth >= 2 ? CHILD_SVG : FOLDER_SVG;
+  return `<a href="#" class="nav-link" data-folder="${node.id}" style="padding-left:${pad}px">${icon} ${node.name}</a>`
+    + node.children.map(c => folderNodeHTML(c, depth + 1)).join('');
+}
+
+function renderFolderNav(tree) {
+  const sharedSVG = `<svg width="13" height="13" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3.5" stroke="currentColor" stroke-width="1.5"/><path d="M2 18c0-4.4 3.6-7 8-7s8 2.6 8 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+  document.getElementById('folderNav').innerHTML =
+    `<a href="#" class="nav-link${state.folder === '' ? ' active' : ''}" data-folder="">
+      <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M2 5h5l2 2h9v10H2z" fill="currentColor" opacity=".2" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+      All Files <span class="count" id="countAll">${state.files.length}</span>
+    </a>`
+    + tree.map(n => folderNodeHTML(n, 0)).join('')
+    + `<div class="nav-label" style="margin-top:.5rem">공유됨</div>
+    <a href="#" class="nav-link${state.folder === '__shared__' ? ' active' : ''}" data-folder="__shared__">
+      ${sharedSVG} 공유된 파일
+    </a>`;
+}
+
+async function loadFolders() {
+  try {
+    const folders = await api.getFolders();
+    state.folders = folders;
+    renderFolderNav(buildFolderTree(folders));
+  } catch(e) {
+    console.error('[loadFolders]', e);
+  }
+}
+
+function buildFolderPaths(folders) {
+  const map = new Map(folders.map(f => [f.id, f]));
+  function getPath(id) {
+    const f = map.get(id);
+    if (!f) return '';
+    return f.parent_id ? getPath(f.parent_id) + ' / ' + f.name : f.name;
+  }
+  return folders.map(f => ({id: f.id, path: getPath(f.id)}));
+}
+
+function renderFolderModal() {
+  const paths = buildFolderPaths(state.folders);
+
+  const sel = document.getElementById('folderParentSelect');
+  sel.innerHTML = `<option value="" style="font-weight:600">— root (최상위) —</option>`
+    + paths.map(({id, path}) => `<option value="${id}">${path}</option>`).join('');
+
+  const list = document.getElementById('folderDeleteList');
+  if (!paths.length) {
+    list.innerHTML = '<div style="font-size:.84rem;color:var(--text-muted);text-align:center;padding:1rem 0">폴더 없음</div>';
+    return;
+  }
+  list.innerHTML = paths.map(({id, path}) => `
+    <div class="folder-del-item">
+      <span class="fdi-path">${path}</span>
+      <button class="btn btn-danger-outline" style="padding:.2rem .5rem;font-size:.76rem;flex-shrink:0" data-folder-id="${id}">삭제</button>
+    </div>
+  `).join('');
+}
+
+document.getElementById('btnFolderModal').addEventListener('click', () => {
+  document.querySelectorAll('.folder-tab').forEach((t, i) => t.classList.toggle('active', i === 0));
+  document.getElementById('folderTabAdd').removeAttribute('data-hidden');
+  document.getElementById('folderTabDel').setAttribute('data-hidden', '');
+  document.getElementById('folderNameInput').value = '';
+  renderFolderModal();
+  openModal('folderModal');
+});
+
+document.querySelectorAll('.folder-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.folder-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('folderTabAdd').toggleAttribute('data-hidden', tab.dataset.tab !== 'add');
+    document.getElementById('folderTabDel').toggleAttribute('data-hidden', tab.dataset.tab !== 'del');
+  });
+});
+
+document.getElementById('btnCreateFolder').addEventListener('click', async () => {
+  const name = document.getElementById('folderNameInput').value.trim();
+  if (!name) return;
+  const parent_id = document.getElementById('folderParentSelect').value;
+  try {
+    await api.createFolder(name, parent_id);
+    closeModal('folderModal');
+    await loadFolders();
+  } catch(e) {
+    alert('폴더 생성 실패: ' + e.message);
+  }
+});
+
+document.getElementById('folderDeleteList').addEventListener('click', async e => {
+  const btn = e.target.closest('[data-folder-id]');
+  if (!btn) return;
+  const id = btn.dataset.folderId;
+  try {
+    await api.deleteFolder(id);
+    if (state.folder === id) state.folder = '';
+    await loadFolders();
+    render();
+    renderFolderModal();
+  } catch(e) {
+    alert('폴더 삭제 실패: ' + e.message);
+  }
+});
+
+document.getElementById('btnMoveSelected').addEventListener('click', () => {
+  const n = state.selected.size;
+  document.getElementById('moveSubtitle').textContent = `${n}개 파일 이동`;
+  const paths = buildFolderPaths(state.folders);
+  document.getElementById('moveFolderSelect').innerHTML =
+    `<option value="">— root (최상위) —</option>`
+    + paths.map(({id, path}) => `<option value="${id}">${path}</option>`).join('');
+  openModal('moveModal');
+});
+
+document.getElementById('btnConfirmMove').addEventListener('click', async () => {
+  const folder_id = document.getElementById('moveFolderSelect').value;
+  const ids = [...state.selected];
+  try {
+    await api.moveFiles(ids, folder_id);
+    closeModal('moveModal');
+    state.selected.clear();
+    updateBulkButtons();
+    await loadFiles();
+  } catch(e) {
+    alert('이동 실패: ' + e.message);
+  }
+});
+
+/* ═══════════════════════════════════════════
    SEARCH, FILTER, SORT
 ═══════════════════════════════════════════ */
 document.getElementById('searchInput').addEventListener('input', e => {
@@ -1068,14 +1328,14 @@ document.querySelectorAll('thead').forEach(thead => {
   });
 });
 
-document.querySelectorAll('.nav-link').forEach(link => {
-  link.addEventListener('click', e => {
-    e.preventDefault();
-    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-    link.classList.add('active');
-    state.folder = link.dataset.folder;
-    render();
-  });
+document.getElementById('folderNav').addEventListener('click', e => {
+  const link = e.target.closest('.nav-link');
+  if (!link) return;
+  e.preventDefault();
+  document.querySelectorAll('#folderNav .nav-link').forEach(l => l.classList.remove('active'));
+  link.classList.add('active');
+  state.folder = link.dataset.folder;
+  render();
 });
 
 /* ═══════════════════════════════════════════
@@ -1151,6 +1411,10 @@ document.getElementById('btnMenuGrantedPerms').addEventListener('click', async (
   }
 });
 
+document.getElementById('btnMenuAdmin').addEventListener('click', () => {
+  window.location.href = '/admin';
+});
+
 document.getElementById('btnLogout').addEventListener('click', async () => {
   try { await fetch('/logout', {method: 'POST', credentials: 'include'}); } catch(_) {}
   window.location.href = '/login';
@@ -1192,5 +1456,18 @@ if (window.innerWidth <= 640) {
   document.getElementById('btnList').classList.remove('active');
 }
 loadFiles();
+loadFolders();
 loadServerInfo();
+
+(async () => {
+  try {
+    const r = await fetch('/me', {credentials:'include'});
+    if (!r.ok) return;
+    const me = await r.json();
+    if (me.role === 'admin' || me.role === 'assiadmin') {
+      document.getElementById('btnMenuAdmin').removeAttribute('data-hidden');
+    }
+    if (me.username) document.querySelector('.user-menu-label').textContent = me.username;
+  } catch(_) {}
+})();
 </script>

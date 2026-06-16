@@ -43,7 +43,14 @@ func ListFiles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := db.DB.Query("SELECT ID, OriginalName, Size, MimeType, UploadedAt FROM files WHERE OwnerID = ?", nowUser)
+	folderID := r.URL.Query().Get("folder_id")
+
+	var rows *sql.Rows
+	if folderID == "" {
+		rows, err = db.DB.Query("SELECT ID, COALESCE(FolderID,''), OriginalName, Size, MimeType, UploadedAt FROM files WHERE OwnerID = ?", nowUser)
+	} else {
+		rows, err = db.DB.Query("SELECT ID, COALESCE(FolderID,''), OriginalName, Size, MimeType, UploadedAt FROM files WHERE OwnerID = ? AND FolderID = ?", nowUser, folderID)
+	}
 	if err != nil {
 		log.Printf("[ListFiles] mine query: %v", err)
 		http.Error(w, "failed to query files", http.StatusInternalServerError)
@@ -53,7 +60,7 @@ func ListFiles(w http.ResponseWriter, r *http.Request) {
 
 	for rows.Next() {
 		var f model.File
-		err = rows.Scan(&f.ID, &f.OriginalName, &f.Size, &f.MimeType, &f.UploadedAt)
+		err = rows.Scan(&f.ID, &f.FolderId, &f.OriginalName, &f.Size, &f.MimeType, &f.UploadedAt)
 		if err != nil {
 			log.Printf("[ListFiles] mine scan: %v", err)
 			http.Error(w, "failed to read files", http.StatusInternalServerError)
@@ -423,13 +430,32 @@ func GetGrantedPerms(w http.ResponseWriter, r *http.Request) {
 		Permission int    `json:"permission"`
 	}
 
-	rows, err := db.DB.Query(`
-		SELECT f.ID, f.OriginalName, fp.UserID, u.Username, fp.Permission
-		FROM files f
-		JOIN file_permissions fp ON f.ID = fp.FileID
-		JOIN users u ON fp.UserID = u.ID
-		WHERE f.OwnerID = ? AND fp.UserID != ?
-		ORDER BY f.OriginalName, u.Username`, nowUser, nowUser)
+	fileID := r.URL.Query().Get("file_id")
+
+	var rows *sql.Rows
+	if fileID != "" {
+		var role string
+		db.DB.QueryRow("SELECT Role FROM users WHERE ID = ?", nowUser).Scan(&role)
+		if role != "admin" && role != "assiadmin" {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+		rows, err = db.DB.Query(`
+			SELECT f.ID, f.OriginalName, fp.UserID, u.Username, fp.Permission
+			FROM files f
+			JOIN file_permissions fp ON f.ID = fp.FileID
+			JOIN users u ON fp.UserID = u.ID
+			WHERE f.ID = ?
+			ORDER BY u.Username`, fileID)
+	} else {
+		rows, err = db.DB.Query(`
+			SELECT f.ID, f.OriginalName, fp.UserID, u.Username, fp.Permission
+			FROM files f
+			JOIN file_permissions fp ON f.ID = fp.FileID
+			JOIN users u ON fp.UserID = u.ID
+			WHERE f.OwnerID = ? AND fp.UserID != ?
+			ORDER BY f.OriginalName, u.Username`, nowUser, nowUser)
+	}
 	if err != nil {
 		log.Printf("[GetGrantedPerms] query: %v", err)
 		http.Error(w, "failed to query permissions", http.StatusInternalServerError)
@@ -484,7 +510,11 @@ func UpdatePerm(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, perm := range req.Permissions {
-		_, err = db.DB.Exec("INSERT INTO file_permissions (FileID, UserID, Permission) VALUES (?, ?, ?) ON CONFLICT (FileID, UserID) DO UPDATE SET Permission = excluded.Permission", req.FileID, perm.UserID, perm.Permission)
+		if perm.Permission == 0 {
+			_, err = db.DB.Exec("DELETE FROM file_permissions WHERE FileID = ? AND UserID = ?", req.FileID, perm.UserID)
+		} else {
+			_, err = db.DB.Exec("INSERT INTO file_permissions (FileID, UserID, Permission) VALUES (?, ?, ?) ON CONFLICT (FileID, UserID) DO UPDATE SET Permission = excluded.Permission", req.FileID, perm.UserID, perm.Permission)
+		}
 		if err != nil {
 			log.Printf("[UpdatePerm] perm upsert [%s]: %v", req.FileID, err)
 			http.Error(w, "failed to update permission", http.StatusInternalServerError)
