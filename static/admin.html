@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LightCloud Admin</title>
+<link rel="stylesheet" href="/static/css/lightcloud.css?v=2">
+<script>
+  const saved = localStorage.getItem('theme');
+  if (saved) document.documentElement.setAttribute('data-theme', saved);
+</script>
+</head>
+<body>
+<div class="app">
+
+  <!-- ════ SIDEBAR ════ -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M7 1C4.2 1 2 3.2 2 6c-1.1 0-2 .9-2 2s.9 2 2 2h10c1.1 0 2-.9 2-2s-.9-2-2-2c0-2.8-2.2-5-5-5z" fill="white"/>
+        </svg>
+      </div>
+      <span>Admin</span>
+    </div>
+
+    <div class="nav-label">관리</div>
+    <nav>
+      <a href="#" class="nav-link active" data-section="dashboard">
+        <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/></svg>
+        대시보드
+      </a>
+      <a href="#" class="nav-link" data-section="users">
+        <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><circle cx="8" cy="7" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M2 17c0-3.3 2.7-5 6-5s6 1.7 6 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M14 10c2 .5 4 1.8 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="15" cy="6.5" r="2.5" stroke="currentColor" stroke-width="1.5"/></svg>
+        사용자 관리
+      </a>
+      <a href="#" class="nav-link" data-section="files">
+        <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M2 5h5l2 2h9v10H2z" fill="currentColor" opacity=".2" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        파일 관리
+      </a>
+      <a href="#" class="nav-link" data-section="shares">
+        <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><circle cx="15" cy="5" r="2.5" stroke="currentColor" stroke-width="1.5"/><circle cx="5" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/><circle cx="15" cy="15" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M7.3 9l5-2.5M7.3 11l5 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        공유 링크
+      </a>
+      <a href="#" class="nav-link" data-section="sessions">
+        <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><rect x="3" y="6" width="14" height="11" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M7 6V5a3 3 0 0 1 6 0v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="12" r="1.5" fill="currentColor"/></svg>
+        세션 관리
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user-wrap">
+        <div class="user-dropdown-menu" id="userDropdown" data-hidden>
+          <button id="btnGoMain">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 1l-6 6 6 6M1 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            메인으로
+          </button>
+          <div class="divider"></div>
+          <button class="danger" id="btnLogout">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M5 2H2v10h3M9 4l3 3-3 3M12 7H5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            로그아웃
+          </button>
+        </div>
+        <button class="user-menu-btn" id="btnUserMenu">
+          <div class="user-avatar">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3.5" stroke="currentColor" stroke-width="1.5"/><path d="M2 18c0-4.4 3.6-7 8-7s8 2.6 8 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <span class="user-menu-label">관리자</span>
+          <svg id="userMenuChevron" width="11" height="11" viewBox="0 0 12 12" fill="none" style="transition:transform .15s ease"><path d="M2 8L6 4L10 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ════ MAIN ════ -->
+  <main class="main">
+    <div class="top-bar">
+      <h3 id="sectionTitle" style="font-size:1rem;font-weight:700;color:var(--text)">대시보드</h3>
+      <div style="margin-left:auto">
+        <button class="dark-toggle" id="btnTheme" title="Toggle dark mode">
+          <svg id="iconMoon" width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M13.5 10A6 6 0 0 1 6 2.5a6 6 0 1 0 7.5 7.5z" fill="currentColor"/></svg>
+          <svg id="iconSun"  width="15" height="15" viewBox="0 0 16 16" fill="none" data-hidden><circle cx="8" cy="8" r="3" fill="currentColor"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.2 3.2l1.4 1.4M11.4 11.4l1.4 1.4M3.2 12.8l1.4-1.4M11.4 4.6l1.4-1.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- 대시보드 -->
+    <div id="secDashboard" class="dash-wrap">
+
+      <!-- 히어로 배너 -->
+      <div class="dash-hero">
+        <div class="dash-hero-bg"></div>
+        <div class="dash-hero-content">
+          <div class="dash-hero-icon">
+            <svg width="22" height="22" viewBox="0 0 14 14" fill="none">
+              <path d="M7 1C4.2 1 2 3.2 2 6c-1.1 0-2 .9-2 2s.9 2 2 2h10c1.1 0 2-.9 2-2s-.9-2-2-2c0-2.8-2.2-5-5-5z" fill="white"/>
+            </svg>
+          </div>
+          <div>
+            <div class="dash-hero-title">LightCloud</div>
+            <div class="dash-hero-sub">관리자 대시보드</div>
+          </div>
+        </div>
+        <div class="dash-hero-orb dash-orb1"></div>
+        <div class="dash-hero-orb dash-orb2"></div>
+      </div>
+
+      <!-- 스탯 카드 -->
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-card-icon" style="--ic:#7c6fef;--ic-bg:var(--primary-bg)">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><circle cx="8" cy="7" r="3" stroke="var(--ic)" stroke-width="1.5"/><path d="M2 17c0-3.3 2.7-5 6-5s6 1.7 6 5" stroke="var(--ic)" stroke-width="1.5" stroke-linecap="round"/><path d="M14 10c2 .5 4 1.8 4 4" stroke="var(--ic)" stroke-width="1.5" stroke-linecap="round"/><circle cx="15" cy="6.5" r="2.5" stroke="var(--ic)" stroke-width="1.5"/></svg>
+          </div>
+          <div class="stat-value" id="statUsers">-</div>
+          <div class="stat-label">전체 사용자</div>
+          <div class="stat-bar"><div class="stat-bar-fill" id="statUsersBar" style="width:60%"></div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-icon" style="--ic:#a259ff;--ic-bg:rgba(162,89,255,.12)">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M4 4h7l3 3v9H4z" stroke="var(--ic)" stroke-width="1.5" stroke-linejoin="round"/><path d="M11 4v4h4" stroke="var(--ic)" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="stat-value" id="statFiles">-</div>
+          <div class="stat-label">전체 파일</div>
+          <div class="stat-bar"><div class="stat-bar-fill" id="statFilesBar" style="width:40%;background:linear-gradient(90deg,#a259ff,#c084fc)"></div></div>
+        </div>
+        <div class="stat-card stat-card-accent">
+          <div class="stat-card-icon" style="--ic:#06b6d4;--ic-bg:rgba(6,182,212,.12)">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><rect x="2" y="4" width="16" height="12" rx="2" stroke="var(--ic)" stroke-width="1.5"/><path d="M2 8h16" stroke="var(--ic)" stroke-width="1.5"/><circle cx="6" cy="13" r="1" fill="var(--ic)"/><path d="M9 13h5" stroke="var(--ic)" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <div class="stat-value" id="statSize">-</div>
+          <div class="stat-label">총 사용 용량</div>
+          <div class="stat-bar"><div class="stat-bar-fill" id="statSizeBar" style="width:0%;background:linear-gradient(90deg,#06b6d4,#67e8f9)"></div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-icon" style="--ic:#f59e0b;--ic-bg:rgba(245,158,11,.12)">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><circle cx="15" cy="5" r="2.5" stroke="var(--ic)" stroke-width="1.5"/><circle cx="5" cy="10" r="2.5" stroke="var(--ic)" stroke-width="1.5"/><circle cx="15" cy="15" r="2.5" stroke="var(--ic)" stroke-width="1.5"/><path d="M7.3 9l5-2.5M7.3 11l5 2.5" stroke="var(--ic)" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <div class="stat-value" id="statLinks">-</div>
+          <div class="stat-label">공유 링크</div>
+          <div class="stat-bar"><div class="stat-bar-fill" id="statLinksBar" style="width:25%;background:linear-gradient(90deg,#f59e0b,#fcd34d)"></div></div>
+        </div>
+      </div>
+
+      <!-- 디스크 용량 -->
+      <div class="dash-disk-card">
+        <div class="dash-disk-hdr">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/><circle cx="15" cy="10" r="1.5" fill="currentColor"/><circle cx="12" cy="10" r="1.5" fill="currentColor" opacity=".4"/></svg>
+          디스크 사용량
+          <span class="dash-disk-pct" id="diskPct">-</span>
+        </div>
+        <div class="dash-disk-bar-wrap">
+          <div class="dash-disk-bar">
+            <div class="dash-disk-fill" id="diskFill" style="width:0%"></div>
+          </div>
+        </div>
+        <div class="dash-disk-info">
+          <span id="diskUsed">-</span>
+          <span id="diskTotal">-</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 사용자 관리 -->
+    <div id="secUsers" data-hidden class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="min-width:160px">Username</th>
+            <th style="min-width:110px">Role</th>
+            <th style="min-width:110px">가입일</th>
+            <th style="width:100%;min-width:160px">역할 변경</th>
+            <th style="min-width:60px">삭제</th>
+          </tr>
+        </thead>
+        <tbody id="userTableBody"></tbody>
+      </table>
+      <div class="empty" id="emptyUsers" data-hidden>사용자 없음</div>
+    </div>
+
+    <!-- 파일 관리 -->
+    <div id="secFiles" data-hidden class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="min-width:200px">Name</th>
+            <th style="min-width:90px">Size</th>
+            <th style="min-width:80px">Type</th>
+            <th style="width:100%;min-width:120px">Uploaded</th>
+            <th style="min-width:90px">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="fileTableBody"></tbody>
+      </table>
+      <div class="empty" id="emptyFiles" data-hidden>파일 없음</div>
+    </div>
+
+    <!-- 공유 링크 -->
+    <div id="secShares" data-hidden class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="min-width:180px">제목</th>
+            <th style="min-width:110px">생성자</th>
+            <th style="min-width:60px">파일</th>
+            <th style="min-width:110px">만료일</th>
+            <th style="width:100%;min-width:90px">상태</th>
+            <th style="min-width:60px">삭제</th>
+          </tr>
+        </thead>
+        <tbody id="shareTableBody"></tbody>
+      </table>
+      <div class="empty" id="emptyShares" data-hidden>공유 링크 없음</div>
+    </div>
+
+    <!-- 세션 관리 -->
+    <div id="secSessions" data-hidden class="table-wrap">
+      <div style="display:flex;align-items:center;gap:.6rem;padding:.5rem 0 .75rem">
+        <span style="font-size:.78rem;color:var(--text-muted)">만료된 세션 포함 전체 목록</span>
+        <button class="btn btn-outline" id="btnPurgeExpired" style="margin-left:auto;font-size:.76rem;padding:.3rem .7rem">만료 세션 일괄 삭제</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th style="min-width:150px">사용자</th>
+            <th style="min-width:110px">생성</th>
+            <th style="min-width:110px">만료</th>
+            <th style="width:100%;min-width:90px">상태</th>
+            <th style="min-width:90px">강제 종료</th>
+          </tr>
+        </thead>
+        <tbody id="sessionTableBody"></tbody>
+      </table>
+      <div class="empty" id="emptySessions" data-hidden>세션 없음</div>
+    </div>
+  </main>
+</div>
+
+<!-- ════ PERMISSION MODAL ════ -->
+<div class="modal-backdrop" id="permModal" data-hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h4>권한 수정</h4>
+      <button class="modal-close" data-close="permModal">✕</button>
+    </div>
+    <p class="modal-subtitle" id="permSubtitle"></p>
+    <div class="modal-field user-search-wrap">
+      <input type="text" class="modal-input" id="permUserSearch" placeholder="유저 검색…" autocomplete="off">
+      <div class="user-dropdown" id="permUserDropdown" data-hidden></div>
+    </div>
+    <div id="permUserList" style="display:flex;flex-direction:column;gap:.4rem;max-height:240px;overflow-y:auto;margin-bottom:.5rem"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" data-close="permModal">취소</button>
+      <button class="btn btn-primary" id="btnSavePerm">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ DELETE CONFIRM MODAL ════ -->
+<div class="modal-backdrop" id="deleteModal" data-hidden>
+  <div class="modal" style="max-width:360px">
+    <div class="modal-header">
+      <h4>삭제 확인</h4>
+      <button class="modal-close" data-close="deleteModal">✕</button>
+    </div>
+    <p id="deleteModalMsg" style="margin:.5rem 0 1rem;font-size:.88rem"></p>
+    <div class="modal-footer">
+      <button class="btn btn-danger" id="btnConfirmDelete">삭제</button>
+      <button class="btn btn-outline" data-close="deleteModal">취소</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ═══════════════════════════════════════════
+   API
+═══════════════════════════════════════════ */
+const api = {
+  async getStats() {
+    const r = await fetch('/admin/stats', {credentials:'include'});
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  },
+  async getUsers() {
+    const r = await fetch('/admin/users', {credentials:'include'});
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  },
+  async updateRole(user_id, role) {
+    const r = await fetch('/admin/users/role', {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({user_id, role})
+    });
+    if (!r.ok) throw new Error(await r.text());
+  },
+  async deleteUser(user_id) {
+    const r = await fetch('/admin/users/delete', {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({user_id})
+    });
+    if (!r.ok) throw new Error(await r.text());
+  },
+  async getAdminFiles() {
+    const r = await fetch('/admin/files', {credentials:'include'});
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  },
+  async getFilePerm(file_id) {
+    const r = await fetch(`/perm/granted?file_id=${file_id}`, {credentials:'include'});
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  },
+  async updatePerm(file_id, permissions) {
+    const r = await fetch('/perm', {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({file_id, permissions})
+    });
+    if (!r.ok) throw new Error(await r.text());
+  },
+  async deleteFile(id) {
+    const r = await fetch('/admin/files/delete', {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({id})
+    });
+    if (!r.ok) throw new Error(await r.text());
+  },
+  async searchUsers(q) {
+    const r = await fetch(`/users/search?q=${encodeURIComponent(q)}`, {credentials:'include'});
+    if (!r.ok) return [];
+    return r.json();
+  },
+  async getShares() {
+    const r = await fetch('/admin/shares', {credentials:'include'});
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  },
+  async deleteShare(token) {
+    const r = await fetch('/admin/shares/delete', {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({token})
+    });
+    if (!r.ok) throw new Error(await r.text());
+  },
+  async getSessions() {
+    const r = await fetch('/admin/sessions', {credentials:'include'});
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  },
+  async deleteSession(token) {
+    const r = await fetch('/admin/sessions/delete', {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({token})
+    });
+    if (!r.ok) throw new Error(await r.text());
+  },
+};
+
+/* ═══════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════ */
+function formatBytes(b) {
+  if (b < 1024) return `${b} B`;
+  if (b < 1048576) return `${(b/1024).toFixed(0)} KB`;
+  if (b < 1073741824) return `${(b/1048576).toFixed(1)} MB`;
+  return `${(b/1073741824).toFixed(1)} GB`;
+}
+
+const ROLE_LABEL = {admin:'관리자', assiadmin:'부관리자', user:'일반'};
+
+function openModal(id)  { document.getElementById(id).removeAttribute('data-hidden'); }
+function closeModal(id) { document.getElementById(id).setAttribute('data-hidden', ''); }
+
+document.querySelectorAll('.modal-backdrop').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) closeModal(el.id); });
+});
+document.querySelectorAll('[data-close]').forEach(btn => {
+  btn.addEventListener('click', () => closeModal(btn.dataset.close));
+});
+
+/* ═══════════════════════════════════════════
+   SECTION SWITCH
+═══════════════════════════════════════════ */
+const SECTIONS = {
+  dashboard: '대시보드',
+  users:     '사용자 관리',
+  files:     '파일 관리',
+  shares:    '공유 링크',
+  sessions:  '세션 관리',
+};
+
+function showSection(name) {
+  Object.keys(SECTIONS).forEach(k => {
+    const el = document.getElementById(`sec${k.charAt(0).toUpperCase()+k.slice(1)}`);
+    el.toggleAttribute('data-hidden', k !== name);
+  });
+  document.getElementById('sectionTitle').textContent = SECTIONS[name];
+  document.querySelectorAll('.nav-link[data-section]').forEach(l =>
+    l.classList.toggle('active', l.dataset.section === name));
+  if      (name === 'dashboard') loadDashboard();
+  else if (name === 'users')     loadUsers();
+  else if (name === 'files')     loadAdminFiles();
+  else if (name === 'shares')    loadShares();
+  else if (name === 'sessions')  loadSessions();
+}
+
+document.querySelectorAll('.nav-link[data-section]').forEach(link => {
+  link.addEventListener('click', e => { e.preventDefault(); showSection(link.dataset.section); });
+});
+
+/* ═══════════════════════════════════════════
+   DASHBOARD
+═══════════════════════════════════════════ */
+async function loadDashboard() {
+  try {
+    const [s, disk] = await Promise.all([
+      api.getStats(),
+      fetch('/disk', {credentials:'include'}).then(r => r.ok ? r.json() : null),
+    ]);
+
+    document.getElementById('statUsers').textContent = s.user_count;
+    document.getElementById('statFiles').textContent = s.file_count;
+    document.getElementById('statSize').textContent  = formatBytes(s.total_size);
+    document.getElementById('statLinks').textContent = s.share_link_count;
+
+    if (disk) {
+      const used  = disk.total - disk.free;
+      const pct   = disk.total > 0 ? Math.round(used / disk.total * 100) : 0;
+      const sizePct = disk.total > 0 ? Math.round(s.total_size / disk.total * 100) : 0;
+      document.getElementById('diskUsed').textContent  = `사용 ${formatBytes(used)}`;
+      document.getElementById('diskTotal').textContent = `전체 ${formatBytes(disk.total)}`;
+      document.getElementById('diskPct').textContent   = `${pct}%`;
+      setTimeout(() => {
+        document.getElementById('diskFill').style.width = `${pct}%`;
+        document.getElementById('statSizeBar').style.width = `${Math.min(sizePct, 100)}%`;
+      }, 80);
+    }
+  } catch(e) { console.error('[dashboard]', e); }
+}
+
+/* ═══════════════════════════════════════════
+   USERS
+═══════════════════════════════════════════ */
+let pendingDeleteUID = null;
+let pendingDeleteFileID = null;
+let pendingDeleteType = null;
+
+async function loadUsers() {
+  try {
+    const users = await api.getUsers();
+    const tbody = document.getElementById('userTableBody');
+    document.getElementById('emptyUsers').toggleAttribute('data-hidden', users.length > 0);
+    if (!users.length) { tbody.innerHTML = ''; return; }
+    tbody.innerHTML = users.map(u => {
+      const isAdmin = u.role === 'admin';
+      const roleBadge = `<span class="badge" style="background:${isAdmin ? 'var(--primary-bg);color:var(--primary)' : 'var(--surface2);color:var(--text-muted)'}">${ROLE_LABEL[u.role] || u.role}</span>`;
+      const roleCell = isAdmin
+        ? `<span style="font-size:.78rem;color:var(--text-dim)">변경 불가</span>`
+        : `<select class="modal-input" style="padding:.28rem .5rem;font-size:.8rem;width:auto" data-uid="${u.id}" data-cur="${u.role}">
+            <option value="user" ${u.role==='user'?'selected':''}>user</option>
+            <option value="assiadmin" ${u.role==='assiadmin'?'selected':''}>assiadmin</option>
+           </select>`;
+      const delCell = isAdmin ? '' :
+        `<button class="btn-icon btn-del" data-action="deleteUser" data-uid="${u.id}" title="삭제">
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M5 4V2h4v2M4 4l.8 8h4.4l.8-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>`;
+      return `<tr>
+        <td><span style="font-weight:500">${u.username}</span></td>
+        <td>${roleBadge}</td>
+        <td><span class="mono">${(u.created_at||'').slice(0,10)}</span></td>
+        <td>${roleCell}</td>
+        <td>${delCell}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) { console.error('[loadUsers]', e); }
+}
+
+document.getElementById('userTableBody').addEventListener('change', async e => {
+  const sel = e.target.closest('select[data-uid]');
+  if (!sel) return;
+  try {
+    await api.updateRole(sel.dataset.uid, sel.value);
+    sel.dataset.cur = sel.value;
+  } catch(err) {
+    alert('역할 변경 실패: ' + err.message);
+    sel.value = sel.dataset.cur;
+  }
+});
+
+document.getElementById('userTableBody').addEventListener('click', e => {
+  const btn = e.target.closest('[data-action="deleteUser"]');
+  if (!btn) return;
+  pendingDeleteUID = btn.dataset.uid;
+  pendingDeleteType = 'user';
+  document.getElementById('deleteModalMsg').textContent = '이 사용자를 정말 삭제하시겠어요? 해당 유저의 파일도 모두 삭제됩니다.';
+  openModal('deleteModal');
+});
+
+/* ═══════════════════════════════════════════
+   FILES
+═══════════════════════════════════════════ */
+async function loadAdminFiles() {
+  try {
+    const files = await api.getAdminFiles();
+    const tbody = document.getElementById('fileTableBody');
+    document.getElementById('emptyFiles').toggleAttribute('data-hidden', files.length > 0);
+    if (!files.length) { tbody.innerHTML = ''; return; }
+
+    const groups = new Map();
+    for (const f of files) {
+      if (!groups.has(f.owner_name)) groups.set(f.owner_name, []);
+      groups.get(f.owner_name).push(f);
+    }
+
+    let html = '';
+    for (const [owner, fs] of groups) {
+      html += `<tr class="section-hdr"><td colspan="5">${owner}의 파일 <span class="section-count">${fs.length}</span></td></tr>`;
+      html += fs.map(f => {
+        const mime = (f.mime_type || '').split('/')[1] || 'file';
+        return `<tr>
+          <td><span class="file-name">${f.original_name}</span></td>
+          <td><span class="mono">${formatBytes(f.size)}</span></td>
+          <td><span class="badge" style="background:var(--surface2);color:var(--text-muted);font-size:.66rem">${mime.toUpperCase()}</span></td>
+          <td><span class="mono">${(f.uploaded_at||'').slice(0,10)}</span></td>
+          <td><div class="row-actions">
+            <button class="btn-icon btn-share" title="권한" data-action="perm" data-id="${f.id}" data-name="${f.original_name}">
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect x="3" y="6" width="8" height="7" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5 6V4a2 2 0 1 1 4 0v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+            </button>
+            <button class="btn-icon btn-del" title="삭제" data-action="deleteFile" data-id="${f.id}" data-name="${f.original_name}">
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M5 4V2h4v2M4 4l.8 8h4.4l.8-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </button>
+          </div></td>
+        </tr>`;
+      }).join('');
+    }
+    tbody.innerHTML = html;
+  } catch(e) { console.error('[loadAdminFiles]', e); }
+}
+
+document.getElementById('fileTableBody').addEventListener('click', async e => {
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  if (btn.dataset.action === 'perm') {
+    await openAdminPermModal(btn.dataset.id, btn.dataset.name);
+  } else if (btn.dataset.action === 'deleteFile') {
+    pendingDeleteFileID = btn.dataset.id;
+    pendingDeleteType = 'file';
+    document.getElementById('deleteModalMsg').textContent = `"${btn.dataset.name}" 파일을 정말 삭제하시겠어요?`;
+    openModal('deleteModal');
+  }
+});
+
+/* ═══════════════════════════════════════════
+   DELETE CONFIRM
+═══════════════════════════════════════════ */
+let pendingDeleteShareToken = null;
+let pendingDeleteSessionToken = null;
+
+document.getElementById('btnConfirmDelete').addEventListener('click', async () => {
+  closeModal('deleteModal');
+  try {
+    if (pendingDeleteType === 'user') {
+      await api.deleteUser(pendingDeleteUID);
+      loadUsers();
+    } else if (pendingDeleteType === 'file') {
+      await api.deleteFile(pendingDeleteFileID);
+      loadAdminFiles();
+    } else if (pendingDeleteType === 'share') {
+      await api.deleteShare(pendingDeleteShareToken);
+      loadShares();
+    } else if (pendingDeleteType === 'session') {
+      await api.deleteSession(pendingDeleteSessionToken);
+      loadSessions();
+    }
+  } catch(e) { alert('삭제 실패: ' + e.message); }
+});
+
+/* ═══════════════════════════════════════════
+   SHARES
+═══════════════════════════════════════════ */
+function fmtDate(str) {
+  if (!str) return '-';
+  return str.slice(0, 10);
+}
+function isExpired(str) {
+  if (!str) return false;
+  return new Date(str) < new Date();
+}
+
+async function loadShares() {
+  try {
+    const shares = await api.getShares();
+    const tbody = document.getElementById('shareTableBody');
+    document.getElementById('emptyShares').toggleAttribute('data-hidden', shares.length > 0);
+    if (!shares.length) { tbody.innerHTML = ''; return; }
+    tbody.innerHTML = shares.map(s => {
+      const expired = isExpired(s.expires_at);
+      const title = s.title || '(무제)';
+      const lockIcon = s.has_password
+        ? `<svg width="11" height="11" viewBox="0 0 14 14" fill="none" title="비밀번호 보호" style="color:var(--primary);flex-shrink:0"><rect x="3" y="6" width="8" height="7" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5 6V4a2 2 0 1 1 4 0v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>`
+        : '';
+      const statusBadge = expired
+        ? `<span class="status-dot expired">만료</span>`
+        : `<span class="status-dot active">활성</span>`;
+      return `<tr style="${expired ? 'opacity:.55' : ''}">
+        <td style="max-width:160px">
+          <div style="display:flex;align-items:center;gap:.35rem;min-width:0">
+            ${lockIcon}
+            <div style="min-width:0;overflow:hidden">
+              <div class="file-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${title}</div>
+              <div class="mono" style="font-size:.66rem;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.token}</div>
+            </div>
+          </div>
+        </td>
+        <td>${s.creator_name}</td>
+        <td><span class="mono">${s.file_count}</span></td>
+        <td><span class="mono">${fmtDate(s.expires_at)}</span></td>
+        <td>${statusBadge}</td>
+        <td>
+          <button class="btn-icon btn-del" data-action="deleteShare" data-token="${s.token}" data-title="${title}" title="삭제">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M5 4V2h4v2M4 4l.8 8h4.4l.8-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+        </td>
+      </tr>`;
+    }).join('');
+  } catch(e) { console.error('[loadShares]', e); }
+}
+
+document.getElementById('shareTableBody').addEventListener('click', e => {
+  const btn = e.target.closest('[data-action="deleteShare"]');
+  if (!btn) return;
+  pendingDeleteShareToken = btn.dataset.token;
+  pendingDeleteType = 'share';
+  document.getElementById('deleteModalMsg').textContent = `"${btn.dataset.title}" 공유 링크를 삭제하시겠어요?`;
+  openModal('deleteModal');
+});
+
+/* ═══════════════════════════════════════════
+   SESSIONS
+═══════════════════════════════════════════ */
+async function loadSessions() {
+  try {
+    const sessions = await api.getSessions();
+    const tbody = document.getElementById('sessionTableBody');
+    document.getElementById('emptySessions').toggleAttribute('data-hidden', sessions.length > 0);
+    if (!sessions.length) { tbody.innerHTML = ''; return; }
+    tbody.innerHTML = sessions.map(s => {
+      const expired = isExpired(s.expires_at);
+      const statusBadge = expired
+        ? `<span class="status-dot expired">만료</span>`
+        : `<span class="status-dot active">활성</span>`;
+      const tokenShort = s.token.slice(0, 8) + '…';
+      return `<tr style="${expired ? 'opacity:.55' : ''}">
+        <td><span style="font-weight:500">${s.username}</span></td>
+        <td><span class="mono">${fmtDate(s.created_at)}</span></td>
+        <td><span class="mono">${fmtDate(s.expires_at)}</span></td>
+        <td>${statusBadge}</td>
+        <td>
+          ${expired ? '' : `<button class="btn-icon btn-del" data-action="deleteSession" data-token="${s.token}" data-user="${s.username}" title="강제 종료">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M9 4l3 3-3 3M12 7H5M2 2v10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>`}
+        </td>
+      </tr>`;
+    }).join('');
+  } catch(e) { console.error('[loadSessions]', e); }
+}
+
+document.getElementById('sessionTableBody').addEventListener('click', e => {
+  const btn = e.target.closest('[data-action="deleteSession"]');
+  if (!btn) return;
+  pendingDeleteSessionToken = btn.dataset.token;
+  pendingDeleteType = 'session';
+  document.getElementById('deleteModalMsg').textContent = `${btn.dataset.user}의 세션을 강제 종료하시겠어요?`;
+  openModal('deleteModal');
+});
+
+document.getElementById('btnPurgeExpired').addEventListener('click', async () => {
+  if (!confirm('만료된 세션을 모두 삭제할까요?')) return;
+  try {
+    const sessions = await api.getSessions();
+    const expired = sessions.filter(s => isExpired(s.expires_at));
+    await Promise.all(expired.map(s => api.deleteSession(s.token)));
+    loadSessions();
+  } catch(e) { alert('일괄 삭제 실패: ' + e.message); }
+});
+
+/* ═══════════════════════════════════════════
+   PERMISSION MODAL
+═══════════════════════════════════════════ */
+const PERM_BITS = [
+  {bit:1,  label:'읽기'},
+  {bit:2,  label:'다운로드'},
+  {bit:4,  label:'쓰기'},
+  {bit:8,  label:'삭제'},
+  {bit:16, label:'관리'},
+];
+
+const permUsers  = new Map();
+const removedUIDs = new Set();
+let permFileId = null;
+
+function renderPermUserList() {
+  const container = document.getElementById('permUserList');
+  if (!permUsers.size) {
+    container.innerHTML = '<div style="font-size:.82rem;color:var(--text-muted)">추가된 유저 없음</div>';
+    return;
+  }
+  container.innerHTML = [...permUsers.entries()].map(([uid, {username, permission}]) => `
+    <div class="perm-user-row" data-uid="${uid}">
+      <span class="perm-username">${username}</span>
+      <div class="perm-bits">
+        ${PERM_BITS.map(({bit, label}) => `
+          <label class="perm-bit-label">
+            <input type="checkbox" data-uid="${uid}" data-bit="${bit}" ${(permission & bit) ? 'checked' : ''}>
+            ${label}
+          </label>
+        `).join('')}
+      </div>
+      <button class="ui-remove perm-remove" data-uid="${uid}" title="제거">✕</button>
+    </div>
+  `).join('');
+}
+
+async function openAdminPermModal(fileId, fileName) {
+  permFileId = fileId;
+  permUsers.clear();
+  removedUIDs.clear();
+  document.getElementById('permSubtitle').textContent = fileName;
+  document.getElementById('permUserSearch').value = '';
+  document.getElementById('permUserDropdown').setAttribute('data-hidden', '');
+  renderPermUserList();
+  openModal('permModal');
+  try {
+    const items = await api.getFilePerm(fileId);
+    for (const item of items) {
+      permUsers.set(item.user_id, {username: item.username, permission: item.permission});
+    }
+    renderPermUserList();
+  } catch(e) { console.error('[openAdminPermModal]', e); }
+}
+
+document.getElementById('permUserList').addEventListener('click', e => {
+  const removeBtn = e.target.closest('.perm-remove');
+  if (removeBtn) {
+    const uid = removeBtn.dataset.uid;
+    removedUIDs.add(uid);
+    permUsers.delete(uid);
+    renderPermUserList();
+    return;
+  }
+  const cb = e.target.closest('input[type="checkbox"][data-uid]');
+  if (cb) {
+    const uid = cb.dataset.uid;
+    const bit = Number(cb.dataset.bit);
+    const entry = permUsers.get(uid);
+    if (!entry) return;
+    const idx = PERM_BITS.findIndex(p => p.bit === bit);
+    if (cb.checked) {
+      for (let i = 0; i <= idx; i++) entry.permission |= PERM_BITS[i].bit;
+    } else {
+      for (let i = idx; i < PERM_BITS.length; i++) entry.permission &= ~PERM_BITS[i].bit;
+    }
+    renderPermUserList();
+  }
+});
+
+let permSearchTimer = null;
+document.getElementById('permUserSearch').addEventListener('input', e => {
+  clearTimeout(permSearchTimer);
+  const q = e.target.value.trim();
+  if (!q) { document.getElementById('permUserDropdown').setAttribute('data-hidden', ''); return; }
+  permSearchTimer = setTimeout(async () => {
+    const users = await api.searchUsers(q);
+    const dd = document.getElementById('permUserDropdown');
+    if (!users.length) { dd.setAttribute('data-hidden', ''); return; }
+    dd.innerHTML = users.map(u => `<div class="user-dd-item" data-uid="${u.id}" data-username="${u.username}">${u.username}</div>`).join('');
+    dd.removeAttribute('data-hidden');
+  }, 300);
+});
+
+document.getElementById('permUserDropdown').addEventListener('click', e => {
+  const item = e.target.closest('.user-dd-item');
+  if (!item) return;
+  const uid = item.dataset.uid;
+  if (!permUsers.has(uid)) permUsers.set(uid, {username: item.dataset.username, permission: 0});
+  removedUIDs.delete(uid);
+  document.getElementById('permUserDropdown').setAttribute('data-hidden', '');
+  document.getElementById('permUserSearch').value = '';
+  renderPermUserList();
+});
+
+document.getElementById('btnSavePerm').addEventListener('click', async () => {
+  if (!permFileId) { closeModal('permModal'); return; }
+  const permissions = [
+    ...[...permUsers.entries()].map(([user_id, {permission}]) => ({user_id, permission})),
+    ...[...removedUIDs].map(user_id => ({user_id, permission: 0})),
+  ];
+  try {
+    await api.updatePerm(permFileId, permissions);
+    closeModal('permModal');
+  } catch(e) { alert('권한 저장 실패: ' + e.message); }
+});
+
+/* ═══════════════════════════════════════════
+   USER MENU
+═══════════════════════════════════════════ */
+const userDropdown = document.getElementById('userDropdown');
+const userMenuChevron = document.getElementById('userMenuChevron');
+
+function closeUserMenu() {
+  userDropdown.setAttribute('data-hidden', '');
+  userMenuChevron.style.transform = '';
+}
+document.getElementById('btnUserMenu').addEventListener('click', e => {
+  e.stopPropagation();
+  if (userDropdown.hasAttribute('data-hidden')) {
+    userDropdown.removeAttribute('data-hidden');
+    userMenuChevron.style.transform = 'rotate(180deg)';
+  } else { closeUserMenu(); }
+});
+document.addEventListener('click', () => closeUserMenu());
+document.getElementById('btnGoMain').addEventListener('click', () => window.location.href = '/main');
+document.getElementById('btnLogout').addEventListener('click', async () => {
+  try { await fetch('/logout', {method:'POST', credentials:'include'}); } catch(_) {}
+  window.location.href = '/login';
+});
+
+/* ═══════════════════════════════════════════
+   DARK MODE
+═══════════════════════════════════════════ */
+let theme = localStorage.getItem('theme') || 'light';
+function applyTheme() {
+  document.documentElement.setAttribute('data-theme', theme);
+  document.getElementById('iconMoon').toggleAttribute('data-hidden', theme === 'dark');
+  document.getElementById('iconSun').toggleAttribute('data-hidden',  theme === 'light');
+}
+document.getElementById('btnTheme').addEventListener('click', () => {
+  theme = theme === 'light' ? 'dark' : 'light';
+  localStorage.setItem('theme', theme);
+  applyTheme();
+});
+applyTheme();
+
+/* ═══════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════ */
+loadDashboard();
+</script>
+</body>
+</html>
