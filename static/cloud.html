@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LightCloud</title>
-<link rel="stylesheet" href="/static/css/lightcloud.css">
+<link rel="stylesheet" href="/static/css/lightcloud.css?v=6">
+<script src="/static/js/qrcode.min.js"></script>
 <script>
     const saved = localStorage.getItem('theme');
     if (saved) document.documentElement.setAttribute('data-theme', saved);
@@ -160,6 +161,117 @@
     </div>
 
   </main>
+
+  <!-- ════ VIEWER ════ -->
+  <div class="viewer-wrap" id="viewViewer" data-hidden>
+
+    <div class="viewer-top">
+      <button class="viewer-back" id="btnViewerBack">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+          <path d="M9 2L4 7l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Back
+      </button>
+      <div class="viewer-breadcrumb">
+        <span>All Files</span>
+        <span class="viewer-sep">/</span>
+        <span class="viewer-cur" id="viewerFileName"></span>
+      </div>
+      <div class="viewer-actions">
+        <button class="btn btn-outline" id="btnViewerDownload">
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 2v7M4 6l3 3 3-3M2 11h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          다운로드
+        </button>
+        <button class="btn btn-outline" id="btnViewerShare">
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="11" cy="3" r="1.8" stroke="currentColor" stroke-width="1.4"/><circle cx="3" cy="7" r="1.8" stroke="currentColor" stroke-width="1.4"/><circle cx="11" cy="11" r="1.8" stroke="currentColor" stroke-width="1.4"/><path d="M4.7 6l4-2M4.7 8l4 2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          공유
+        </button>
+      </div>
+    </div>
+
+    <div class="viewer-body">
+
+      <div class="viewer-preview" id="viewerPreview">
+        <div class="viewer-pane" id="vpVideo" data-hidden>
+          <video id="viewerVideo" controls>
+            <source id="viewerVideoSrc" src="" type="video/mp4">
+          </video>
+        </div>
+        <div class="viewer-pane" id="vpImage" data-hidden style="display:flex;align-items:center;justify-content:center">
+          <img id="viewerImg" src="" alt="preview">
+        </div>
+        <div class="viewer-pane viewer-audio-wrap" id="vpAudio" data-hidden>
+          <div class="viewer-audio-icon">
+            <svg width="36" height="36" viewBox="0 0 40 40" fill="none">
+              <path d="M12 10v20M20 6v28M28 10v20M4 18v4M36 18v4" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="viewer-audio-name" id="viewerAudioName"></div>
+          <audio id="viewerAudio" controls></audio>
+        </div>
+        <div class="viewer-pane" id="vpPdf" data-hidden style="width:100%;height:100%">
+          <iframe id="viewerPdf" src="" title="PDF Preview"></iframe>
+        </div>
+        <div class="viewer-pane viewer-text-wrap" id="vpText" data-hidden>
+          <pre class="viewer-text-content" id="viewerText"></pre>
+        </div>
+        <div class="viewer-pane viewer-zip-wrap" id="vpZip" data-hidden>
+          <div class="viewer-zip">
+            <div class="vzip-header">
+              <svg width="14" height="14" viewBox="0 0 14 16" fill="none"><path d="M1 1h9l3 3v11H1z" fill="rgba(124,111,239,.15)" stroke="#9d94f5" stroke-width="1.2" stroke-linejoin="round"/><path d="M10 1l3 3h-3z" fill="#9d94f5" opacity=".5"/></svg>
+              <span id="vzipTitle"></span>
+              <span class="vzip-count" id="vzipCount"></span>
+            </div>
+            <div class="vzip-list" id="vzipList"></div>
+          </div>
+        </div>
+        <div class="viewer-pane viewer-unsupported" id="vpUnsupported" data-hidden>
+          <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+            <rect x="8" y="4" width="30" height="40" rx="4" stroke="rgba(255,255,255,.3)" stroke-width="2"/>
+            <path d="M28 4v12h10" stroke="rgba(255,255,255,.3)" stroke-width="2"/>
+          </svg>
+          <p>이 형식은 미리보기를 지원하지 않아요</p>
+          <button class="btn btn-outline" id="btnUnsupportedDownload" style="border-color:rgba(255,255,255,.2);color:rgba(255,255,255,.5);margin-top:.25rem">다운로드</button>
+        </div>
+      </div>
+
+      <aside class="viewer-info">
+        <div class="vinfo-section">
+          <div class="vinfo-filename" id="vinfoName"></div>
+          <span class="vinfo-mime" id="vinfoMime"></span>
+        </div>
+        <div class="vinfo-section">
+          <div class="vinfo-label">파일 정보</div>
+          <div class="vinfo-row"><span class="vinfo-key">크기</span><span class="vinfo-val" id="vinfoSize"></span></div>
+          <div class="vinfo-row"><span class="vinfo-key">업로드</span><span class="vinfo-val" id="vinfoDate"></span></div>
+          <div class="vinfo-row"><span class="vinfo-key">소유자</span><span class="vinfo-val" id="vinfoOwner"></span></div>
+        </div>
+        <div class="vinfo-section">
+          <div class="vinfo-label">작업</div>
+          <div class="vinfo-actions">
+            <button class="btn btn-primary" id="btnVinfoDownload">
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 2v7M4 6l3 3 3-3M2 11h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              다운로드
+            </button>
+            <button class="btn btn-outline" id="btnVinfoShare">
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="11" cy="3" r="1.8" stroke="currentColor" stroke-width="1.4"/><circle cx="3" cy="7" r="1.8" stroke="currentColor" stroke-width="1.4"/><circle cx="11" cy="11" r="1.8" stroke="currentColor" stroke-width="1.4"/><path d="M4.7 6l4-2M4.7 8l4 2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+              공유 링크 생성
+            </button>
+            <button class="btn btn-outline" id="btnVinfoPerm">
+              <svg width="13" height="13" viewBox="0 0 20 20" fill="none"><rect x="4" y="9" width="12" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M7 9V7a3 3 0 1 1 6 0v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              권한 관리
+            </button>
+            <button class="btn btn-danger-outline" id="btnVinfoDelete">
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M5 4V2h4v2M4 4l.8 8h4.4l.8-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              삭제
+            </button>
+          </div>
+        </div>
+      </aside>
+
+    </div>
+  </div>
+
 </div>
 
 <!-- ════ UPLOAD MODAL ════ -->
@@ -196,7 +308,9 @@
     <div class="share-input-row" id="shareInputRow" data-hidden>
       <input type="text" id="shareLinkInput" readonly>
       <button class="btn btn-primary" id="btnCopyLink">링크 복사</button>
+      <button class="btn btn-outline" id="btnToggleQR">QR 보기</button>
     </div>
+    <div id="shareQR" data-hidden style="text-align:center;margin:.75rem 0"></div>
     <div class="copy-toast" id="copyToast"></div>
     <div class="modal-field">
       <input
@@ -353,6 +467,24 @@
   </div>
 </div>
 
+<!-- ════ UPLOAD PROGRESS PANEL ════ -->
+<div id="uploadProgressPanel" data-hidden>
+  <div class="upp-header">
+    <span id="uppStatus">업로드 중</span>
+    <span class="upp-count" id="uppCount"></span>
+  </div>
+  <div class="upp-file-info">
+    <span class="upp-filename" id="uppFileName"></span>
+    <span class="upp-size" id="uppSize"></span>
+  </div>
+  <div class="upp-speed-row">
+    <span class="upp-speed" id="uppSpeed"></span>
+  </div>
+  <div class="upp-bar-wrap">
+    <div class="upp-bar-fill" id="uppBarFill"></div>
+  </div>
+</div>
+
 <script>
 'use strict';
 
@@ -386,7 +518,57 @@ const api = {
     for (const f of fileList) fd.append('file', f)
     const res =  await fetch('/upload', {method: 'POST', credentials: 'include', body: fd})
     if (!res.ok) throw new Error(await res.text())
-    return res.json()    
+    return res.json()
+  },
+
+  async uploadFilesWithProgress(fileList, onProgress) {
+    for (let i = 0; i < fileList.length; i++) {
+      const file = fileList[i];
+      await new Promise((resolve, reject) => {
+        const fd = new FormData();
+        fd.append('file', file);
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/upload');
+        xhr.withCredentials = true;
+        let prevLoaded = 0;
+        let prevTime = Date.now();
+        xhr.upload.onprogress = e => {
+          if (!e.lengthComputable) return;
+          const now = Date.now();
+          const dt = (now - prevTime) / 1000;
+          const speed = dt > 0 ? (e.loaded - prevLoaded) / dt : 0;
+          prevLoaded = e.loaded;
+          prevTime = now;
+          onProgress({
+            filesDone: i,
+            filesTotal: fileList.length,
+            fileName: file.name,
+            fileSize: file.size,
+            loaded: e.loaded,
+            pct: Math.round(e.loaded / e.total * 100),
+            speed,
+          });
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            onProgress({
+              filesDone: i + 1,
+              filesTotal: fileList.length,
+              fileName: file.name,
+              fileSize: file.size,
+              loaded: file.size,
+              pct: 100,
+              speed: 0,
+            });
+            resolve();
+          } else {
+            reject(new Error(xhr.responseText || `HTTP ${xhr.status}`));
+          }
+        };
+        xhr.onerror = () => reject(new Error('네트워크 오류'));
+        xhr.send(fd);
+      });
+    }
   },
 
   async updatePermission(fileId, permissions) {
@@ -527,6 +709,7 @@ function extIconHTML(mime) {
 function getFiltered() {
   return state.files.filter(f => {
     if (state.folder === '__shared__') return !!f.ownerName;
+    if (state.folder.startsWith('__owner__')) return f.ownerName === state.folder.slice(9);
     if (state.folder) {
       if (f.ownerName) return false;
       if (f.folder !== state.folder) return false;
@@ -562,7 +745,7 @@ function sectionHdrRow(label, count) {
 function rowHTML(f) {
   return `<tr>
     <td><input type="checkbox" data-id="${f.id}" ${state.selected.has(f.id) ? 'checked' : ''}></td>
-    <td><div class="file-cell">${extIconHTML(f.mime)}<span class="file-name">${f.name}</span></div></td>
+    <td style="max-width:0;width:40%"><div class="file-cell" data-action="preview" data-id="${f.id}" style="cursor:pointer">${extIconHTML(f.mime)}<span class="file-name">${f.name}</span></div></td>
     <td><span class="mono">${f.size}</span></td>
     <td><span class="badge" style="background:${getColor(f.mime)}22;color:${getColor(f.mime)}">${f.mime.toUpperCase()}</span></td>
     <td><span class="mono">${f.uploadedTime}</span></td>
@@ -601,7 +784,7 @@ function rowHTML(f) {
 }
 
 function gridCardHTML(f) {
-  return `<div class="grid-card">
+  return `<div class="grid-card" data-action="preview" data-id="${f.id}" style="cursor:pointer">
     ${extIconHTML(f.mime)}
     <div class="fname">${f.name}</div>
     <div class="fsize">${f.size}</div>
@@ -649,7 +832,7 @@ function renderShareLinksList(items) {
   }
   const lockSVG = `<svg width="11" height="11" viewBox="0 0 14 14" fill="none" style="color:var(--text-dim);flex-shrink:0"><rect x="3" y="6" width="8" height="7" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5 6V4a2 2 0 1 1 4 0v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>`;
   body.innerHTML = items.map(item => `
-    <div class="share-link-item">
+    <div class="share-link-item" style="flex-wrap:wrap">
       <div class="sli-info">
         <div class="sli-title-row">
           <span class="sli-title">${item.share_title || '(무제)'}</span>
@@ -657,7 +840,11 @@ function renderShareLinksList(items) {
         </div>
         <div class="sli-meta">파일 ${item.file_count}개 &middot; ${fmtExpiry(item.expires_at)}</div>
       </div>
-      <button class="btn btn-outline sli-copy" style="padding:.25rem .6rem;font-size:.78rem;white-space:nowrap" data-token="${item.token}">링크 복사</button>
+      <div style="display:flex;gap:.35rem;align-items:center;flex-shrink:0">
+        <button class="btn btn-outline sli-qr" style="padding:.25rem .6rem;font-size:.78rem;white-space:nowrap" data-token="${item.token}">QR</button>
+        <button class="btn btn-outline sli-copy" style="padding:.25rem .6rem;font-size:.78rem;white-space:nowrap" data-token="${item.token}">링크 복사</button>
+      </div>
+      <div id="sli-qr-${item.token}" data-hidden style="width:100%;text-align:center;padding:.5rem 0"></div>
     </div>
   `).join('');
 }
@@ -786,6 +973,7 @@ async function loadFiles() {
     name: f.original_name,
     size: formatBytes(f.size),
     mime: (f.mime_type || 'application/octet-stream').split('/')[1] || 'file',
+    fullMime: f.mime_type || 'application/octet-stream',
     uploadedTime: f.uploaded_at.slice(0, 10),
     sizeNum: f.size,
     folder: f.folder_id || '',
@@ -798,6 +986,7 @@ async function loadFiles() {
   document.getElementById('countAll').textContent = state.files.length;
   renderFileFliter();
   render();
+  renderFolderNav(buildFolderTree(state.folders));
 }
 
 /* ═══════════════════════════════════════════
@@ -857,14 +1046,44 @@ document.getElementById('uploadList').addEventListener('click', e => {
   renderUploadList();
 });
 
+function showUploadProgress() {
+  document.getElementById('uppBarFill').style.width = '0%';
+  document.getElementById('uploadProgressPanel').removeAttribute('data-hidden');
+  requestAnimationFrame(() => {
+    document.getElementById('uppBarFill').style.width = '3%';
+  });
+}
+function hideUploadProgress() {
+  document.getElementById('uploadProgressPanel').setAttribute('data-hidden', '');
+}
+function updateUploadProgress({filesDone, filesTotal, fileName, fileSize, loaded, pct, speed}) {
+  document.getElementById('uppStatus').textContent = '업로드 중';
+  document.getElementById('uppCount').textContent = `${filesDone} / ${filesTotal} 완료`;
+  document.getElementById('uppFileName').textContent = fileName;
+  document.getElementById('uppSize').textContent = `${formatBytes(loaded)} / ${formatBytes(fileSize)} · ${pct}%`;
+  document.getElementById('uppSpeed').textContent = speed > 0 ? `${formatBytes(speed)}/s` : '';
+  document.getElementById('uppBarFill').style.width = `${Math.max(3, pct)}%`;
+}
+
 document.getElementById('btnConfirmUpload').addEventListener('click', async () => {
   if (!pendingFiles.length) return;
+  const files = [...pendingFiles];
+  closeModal('uploadModal');
+  pendingFiles = [];
+  document.getElementById('fileInput').value = '';
+  showUploadProgress();
   try {
-    closeModal('uploadModal');
-    await api.uploadFiles(pendingFiles);
-    pendingFiles = [];
+    await api.uploadFilesWithProgress(files, updateUploadProgress);
+    document.getElementById('uppBarFill').style.width = '100%';
+    await new Promise(r => setTimeout(r, 260));
+    document.getElementById('uppStatus').textContent = `✓ ${files.length}개 완료`;
+    document.getElementById('uppCount').textContent = '';
+    document.getElementById('uppFileName').textContent = '';
+    document.getElementById('uppSize').textContent = '';
+    setTimeout(hideUploadProgress, 2000);
     await loadFiles();
-  } catch (e) {
+  } catch(e) {
+    hideUploadProgress();
     alert('업로드 실패: ' + e.message);
   }
 });
@@ -875,9 +1094,19 @@ document.getElementById('btnConfirmUpload').addEventListener('click', async () =
 
 let shareTargetIDs = []; //공유할 id 들
 async function openShareModal(ids, subtitle) {
-  shareTargetIDs = ids
+  shareTargetIDs = ids;
   document.getElementById('shareSubtitle').textContent = subtitle;
   document.getElementById('copyToast').textContent = '';
+  document.getElementById('shareInputRow').setAttribute('data-hidden', '');
+  document.getElementById('shareLinkInput').value = '';
+  document.getElementById('shareQR').setAttribute('data-hidden', '');
+  document.getElementById('shareQR').innerHTML = '';
+  document.getElementById('btnToggleQR').textContent = 'QR 보기';
+  const expireEl = document.getElementById('expireDate');
+  expireEl.value = '';
+  expireEl.type = 'text';
+  document.getElementById('shareTitle').value = '';
+  document.getElementById('sharePassword').value = '';
   openModal('shareModal');
 }
 
@@ -889,6 +1118,18 @@ document.getElementById('btnCopyLink').addEventListener('click', () => {
   setTimeout(() => t.textContent = '', 2500);
 });
 
+document.getElementById('btnToggleQR').addEventListener('click', () => {
+  const qrEl = document.getElementById('shareQR');
+  const btn = document.getElementById('btnToggleQR');
+  if (qrEl.hasAttribute('data-hidden')) {
+    qrEl.removeAttribute('data-hidden');
+    btn.textContent = 'QR 닫기';
+  } else {
+    qrEl.setAttribute('data-hidden', '');
+    btn.textContent = 'QR 보기';
+  }
+});
+
 document.getElementById('btnCreateLink').addEventListener('click', async () => {
   const deadline = new Date(document.getElementById('expireDate').value)
   const hours = Math.floor((deadline - Date.now()) / (1000 * 60 * 60))
@@ -898,6 +1139,12 @@ document.getElementById('btnCreateLink').addEventListener('click', async () => {
     const {url} = await api.createShareLink(shareTargetIDs, hours, password, title)
     document.getElementById('shareLinkInput').value = url
     document.getElementById('shareInputRow').removeAttribute('data-hidden')
+    const qrEl = document.getElementById('shareQR')
+    qrEl.innerHTML = ''
+    qrEl.setAttribute('data-hidden', '')
+    new QRCode(qrEl, {text: url, width: 160, height: 160, colorDark: '#000000', colorLight: '#ffffff'})
+    const toggleBtn = document.getElementById('btnToggleQR')
+    toggleBtn.textContent = 'QR 보기'
   } catch(e) {
     alert('링크 생성 실패: ' + e.message)
   }
@@ -1088,6 +1335,9 @@ document.addEventListener('click', e => {
 ═══════════════════════════════════════════ */
 function handleAction(action, id) {
   switch (action) {
+    case 'preview':
+      openViewer(id);
+      break;
     case 'delete':
       closeAllDropdowns();
       deleteFiles([id]);
@@ -1152,6 +1402,7 @@ document.getElementById('btnConfirmDelete').addEventListener('click', async () =
     await api.deleteFiles(pendingDeleteIDs);
     pendingDeleteIDs.forEach(id => state.selected.delete(id));
     updateBulkButtons();
+    if (viewerFileId && pendingDeleteIDs.includes(viewerFileId)) closeViewer();
     await loadFiles();
   } catch(e) {
     alert('삭제 실패: ' + e.message);
@@ -1187,17 +1438,33 @@ function folderNodeHTML(node, depth) {
 }
 
 function renderFolderNav(tree) {
-  const sharedSVG = `<svg width="13" height="13" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3.5" stroke="currentColor" stroke-width="1.5"/><path d="M2 18c0-4.4 3.6-7 8-7s8 2.6 8 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+  const personSVG = `<svg width="13" height="13" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3.5" stroke="currentColor" stroke-width="1.5"/><path d="M2 18c0-4.4 3.6-7 8-7s8 2.6 8 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+  const allSharedSVG = `<svg width="13" height="13" viewBox="0 0 20 20" fill="none"><circle cx="15" cy="5" r="2.5" stroke="currentColor" stroke-width="1.5"/><circle cx="5" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/><circle cx="15" cy="15" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M7.3 9l5-2.5M7.3 11l5 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+
+  const sharers = [...new Set(state.files.filter(f => f.ownerName).map(f => f.ownerName))]
+    .sort((a, b) => a.localeCompare(b, 'ko'));
+
+  const sharedTotal = state.files.filter(f => f.ownerName).length;
+
+  const sharerSection = sharers.length === 0 ? '' : `
+    <div class="nav-label" style="margin-top:.5rem">공유됨</div>
+    <a href="#" class="nav-link${state.folder === '__shared__' ? ' active' : ''}" data-folder="__shared__">
+      ${allSharedSVG} 전체 공유 <span class="count">${sharedTotal}</span>
+    </a>
+    ${sharers.map(name => {
+      const cnt = state.files.filter(f => f.ownerName === name).length;
+      return `<a href="#" class="nav-link${state.folder === '__owner__' + name ? ' active' : ''}" data-folder="__owner__${name}" style="padding-left:32px">
+        ${personSVG} ${name} <span class="count">${cnt}</span>
+      </a>`;
+    }).join('')}`;
+
   document.getElementById('folderNav').innerHTML =
     `<a href="#" class="nav-link${state.folder === '' ? ' active' : ''}" data-folder="">
       <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M2 5h5l2 2h9v10H2z" fill="currentColor" opacity=".2" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
       All Files <span class="count" id="countAll">${state.files.length}</span>
     </a>`
     + tree.map(n => folderNodeHTML(n, 0)).join('')
-    + `<div class="nav-label" style="margin-top:.5rem">공유됨</div>
-    <a href="#" class="nav-link${state.folder === '__shared__' ? ' active' : ''}" data-folder="__shared__">
-      ${sharedSVG} 공유된 파일
-    </a>`;
+    + sharerSection;
 }
 
 async function loadFolders() {
@@ -1421,6 +1688,23 @@ document.getElementById('btnLogout').addEventListener('click', async () => {
 });
 
 document.getElementById('shareLinksBody').addEventListener('click', e => {
+  const qrBtn = e.target.closest('.sli-qr');
+  if (qrBtn) {
+    const token = qrBtn.dataset.token;
+    const wrap = document.getElementById(`sli-qr-${token}`);
+    if (wrap.hasAttribute('data-hidden')) {
+      wrap.removeAttribute('data-hidden');
+      if (!wrap.hasChildNodes()) {
+        const url = `${window.location.origin}/share/view?token=${token}`;
+        new QRCode(wrap, {text: url, width: 140, height: 140, colorDark: '#000000', colorLight: '#ffffff'});
+      }
+      qrBtn.textContent = 'QR 닫기';
+    } else {
+      wrap.setAttribute('data-hidden', '');
+      qrBtn.textContent = 'QR';
+    }
+    return;
+  }
   const btn = e.target.closest('.sli-copy');
   if (!btn) return;
   const url = `${window.location.origin}/share/view?token=${btn.dataset.token}`;
@@ -1428,6 +1712,122 @@ document.getElementById('shareLinksBody').addEventListener('click', e => {
   const orig = btn.textContent;
   btn.textContent = '복사됨!';
   setTimeout(() => btn.textContent = orig, 1500);
+});
+
+/* ═══════════════════════════════════════════
+   VIEWER
+═══════════════════════════════════════════ */
+let viewerFileId = null;
+
+function openViewer(id) {
+  const f = state.files.find(x => x.id === id);
+  if (!f) return;
+  viewerFileId = id;
+
+  document.querySelector('.main').setAttribute('data-hidden', '');
+  document.getElementById('viewViewer').removeAttribute('data-hidden');
+
+  document.getElementById('viewerFileName').textContent = f.name;
+  document.getElementById('vinfoName').textContent      = f.name;
+  document.getElementById('vinfoMime').textContent      = f.fullMime;
+  document.getElementById('vinfoSize').textContent      = f.size;
+  document.getElementById('vinfoDate').textContent      = f.uploadedTime;
+  document.getElementById('vinfoOwner').textContent     = f.ownerName || '나';
+
+  ['vpVideo','vpImage','vpAudio','vpPdf','vpText','vpZip','vpUnsupported'].forEach(p =>
+    document.getElementById(p).setAttribute('data-hidden', '')
+  );
+
+  const mime = f.fullMime;
+  const src  = `/stream?id=${encodeURIComponent(id)}`;
+
+  if (mime.startsWith('video/')) {
+    document.getElementById('vpVideo').removeAttribute('data-hidden');
+    const v = document.getElementById('viewerVideo');
+    v.src = src; v.load();
+  } else if (mime.startsWith('image/')) {
+    document.getElementById('vpImage').removeAttribute('data-hidden');
+    document.getElementById('viewerImg').src = src;
+  } else if (mime.startsWith('audio/')) {
+    document.getElementById('vpAudio').removeAttribute('data-hidden');
+    document.getElementById('viewerAudioName').textContent = f.name;
+    const a = document.getElementById('viewerAudio');
+    a.src = src; a.load();
+  } else if (mime === 'application/pdf') {
+    document.getElementById('vpPdf').removeAttribute('data-hidden');
+    document.getElementById('viewerPdf').src = src;
+  } else if (mime.startsWith('text/')) {
+    document.getElementById('vpText').removeAttribute('data-hidden');
+    fetch(src, {credentials: 'include'})
+      .then(r => r.text())
+      .then(t => { document.getElementById('viewerText').textContent = t; })
+      .catch(() => { document.getElementById('viewerText').textContent = '(내용을 불러올 수 없어요)'; });
+  } else if (mime === 'application/zip' || mime === 'application/x-zip-compressed' || mime === 'application/x-zip') {
+    document.getElementById('vpZip').removeAttribute('data-hidden');
+    document.getElementById('vzipTitle').textContent = f.name;
+    document.getElementById('vzipList').innerHTML = '<div class="vzip-entry" style="justify-content:center;color:rgba(255,255,255,.3)">불러오는 중…</div>';
+    fetch(`/zip/list?id=${encodeURIComponent(id)}`, {credentials: 'include'})
+      .then(r => r.json())
+      .then(entries => {
+        document.getElementById('vzipCount').textContent = `${entries.length}개 항목`;
+        document.getElementById('vzipList').innerHTML = entries.map(e => {
+          const dirSVG = `<svg width="12" height="12" viewBox="0 0 20 20" fill="none"><path d="M2 5h5l2 2h9v10H2z" fill="currentColor" opacity=".4" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>`;
+          const fileSVG = `<svg width="12" height="12" viewBox="0 0 14 16" fill="none"><path d="M1 1h9l3 3v11H1z" fill="currentColor" opacity=".2" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>`;
+          const sizeStr = e.is_dir ? '' : formatBytes(e.size);
+          return `<div class="vzip-entry${e.is_dir ? ' is-dir' : ''}">
+            ${e.is_dir ? dirSVG : fileSVG}
+            <span class="vzip-name">${e.name}</span>
+            <span class="vzip-size">${sizeStr}</span>
+          </div>`;
+        }).join('') || '<div class="vzip-entry" style="justify-content:center;color:rgba(255,255,255,.3)">ZIP이 비어있어요</div>';
+      })
+      .catch(() => {
+        document.getElementById('vzipList').innerHTML = '<div class="vzip-entry" style="justify-content:center;color:rgba(255,255,255,.3)">목록을 불러올 수 없어요</div>';
+      });
+  } else {
+    document.getElementById('vpUnsupported').removeAttribute('data-hidden');
+  }
+}
+
+function closeViewer() {
+  const v = document.getElementById('viewerVideo');
+  v.pause(); v.src = '';
+  const a = document.getElementById('viewerAudio');
+  a.pause(); a.src = '';
+  document.getElementById('viewerPdf').src = '';
+  document.getElementById('viewerImg').src = '';
+  document.getElementById('viewerText').textContent = '';
+  document.getElementById('viewViewer').setAttribute('data-hidden', '');
+  document.querySelector('.main').removeAttribute('data-hidden');
+  viewerFileId = null;
+}
+
+document.getElementById('btnViewerBack').addEventListener('click', closeViewer);
+
+document.getElementById('btnViewerDownload').addEventListener('click', () => {
+  if (viewerFileId) window.location.href = `/download?id=${viewerFileId}`;
+});
+document.getElementById('btnViewerShare').addEventListener('click', () => {
+  if (!viewerFileId) return;
+  const f = state.files.find(x => x.id === viewerFileId);
+  openShareModal([viewerFileId], f?.name || '');
+});
+document.getElementById('btnVinfoDownload').addEventListener('click', () => {
+  if (viewerFileId) window.location.href = `/download?id=${viewerFileId}`;
+});
+document.getElementById('btnVinfoShare').addEventListener('click', () => {
+  if (!viewerFileId) return;
+  const f = state.files.find(x => x.id === viewerFileId);
+  openShareModal([viewerFileId], f?.name || '');
+});
+document.getElementById('btnVinfoPerm').addEventListener('click', () => {
+  if (viewerFileId) openPermModal(viewerFileId);
+});
+document.getElementById('btnVinfoDelete').addEventListener('click', () => {
+  if (viewerFileId) deleteFiles([viewerFileId]);
+});
+document.getElementById('btnUnsupportedDownload').addEventListener('click', () => {
+  if (viewerFileId) window.location.href = `/download?id=${viewerFileId}`;
 });
 
 /* ═══════════════════════════════════════════
