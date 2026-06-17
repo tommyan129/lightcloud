@@ -22,6 +22,8 @@ func main() {
 	http.HandleFunc("/files", handler.ListFiles)
 	http.HandleFunc("/upload", handler.UploadFiles)
 	http.HandleFunc("/download", handler.DownloadFiles)
+	http.HandleFunc("/stream", handler.StreamFile)
+	http.HandleFunc("/zip/list", handler.ListZipContents)
 	http.HandleFunc("/share/view", handler.ShareHtmlServe)
 	http.HandleFunc("/share", handler.ShareInfo)
 	http.HandleFunc("/share/create", handler.CreateShareLink)

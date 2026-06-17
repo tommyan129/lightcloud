@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"strconv"
+	"strings"
 
 	"io"
 	"log"
@@ -523,6 +524,149 @@ func UpdatePerm(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(`{"ok":true}`))
+}
+
+func ListZipContents(w http.ResponseWriter, r *http.Request) {
+	nowUser, err := getSessionUser(r)
+	if err != nil {
+		http.Error(w, "failed to authenticate", http.StatusUnauthorized)
+		return
+	}
+
+	fileID := r.URL.Query().Get("id")
+	if fileID == "" {
+		http.Error(w, "missing id", http.StatusBadRequest)
+		return
+	}
+
+	var storedName string
+	err = db.DB.QueryRow("SELECT StoredName FROM files WHERE ID = ?", fileID).Scan(&storedName)
+	if err == sql.ErrNoRows {
+		http.Error(w, "file not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		log.Printf("[ListZipContents] db query [%s]: %v", fileID, err)
+		http.Error(w, "failed to query file", http.StatusInternalServerError)
+		return
+	}
+
+	var p int
+	err = db.DB.QueryRow(
+		"SELECT Permission FROM file_permissions WHERE FileID = ? AND UserID = ?", fileID, nowUser,
+	).Scan(&p)
+	if err == sql.ErrNoRows {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	if err != nil {
+		log.Printf("[ListZipContents] perm query [%s]: %v", fileID, err)
+		http.Error(w, "failed to query permission", http.StatusInternalServerError)
+		return
+	}
+	if (p & model.PermRead) == 0 {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+
+	zr, err := zip.OpenReader(filepath.Join(uploadFilesPath, storedName))
+	if err != nil {
+		log.Printf("[ListZipContents] zip open [%s]: %v", storedName, err)
+		http.Error(w, "failed to read zip", http.StatusInternalServerError)
+		return
+	}
+	defer zr.Close()
+
+	type Entry struct {
+		Name  string `json:"name"`
+		Size  int64  `json:"size"`
+		IsDir bool   `json:"is_dir"`
+	}
+	entries := make([]Entry, 0, len(zr.File))
+	for _, f := range zr.File {
+		entries = append(entries, Entry{
+			Name:  f.Name,
+			Size:  int64(f.UncompressedSize64),
+			IsDir: f.FileInfo().IsDir(),
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(entries)
+}
+
+func StreamFile(w http.ResponseWriter, r *http.Request) {
+	nowUser, err := getSessionUser(r)
+	if err != nil {
+		http.Error(w, "failed to authenticate", http.StatusUnauthorized)
+		return
+	}
+
+	fileID := r.URL.Query().Get("id")
+	if fileID == "" {
+		http.Error(w, "missing id", http.StatusBadRequest)
+		return
+	}
+
+	var file model.File
+	err = db.DB.QueryRow(
+		"SELECT OriginalName, StoredName, MimeType FROM files WHERE ID = ?", fileID,
+	).Scan(&file.OriginalName, &file.StoredName, &file.MimeType)
+	if err == sql.ErrNoRows {
+		http.Error(w, "file not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		log.Printf("[StreamFile] db query [%s]: %v", fileID, err)
+		http.Error(w, "failed to query file", http.StatusInternalServerError)
+		return
+	}
+
+	var p int
+	err = db.DB.QueryRow(
+		"SELECT Permission FROM file_permissions WHERE FileID = ? AND UserID = ?", fileID, nowUser,
+	).Scan(&p)
+	if err == sql.ErrNoRows {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	if err != nil {
+		log.Printf("[StreamFile] perm query [%s]: %v", fileID, err)
+		http.Error(w, "failed to query permission", http.StatusInternalServerError)
+		return
+	}
+
+	if (p & model.PermRead) == 0 {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+
+	f, err := os.Open(filepath.Join(uploadFilesPath, file.StoredName))
+	if err != nil {
+		log.Printf("[StreamFile] open [%s]: %v", file.StoredName, err)
+		http.Error(w, "failed to open file", http.StatusInternalServerError)
+		return
+	}
+	defer f.Close()
+
+	stat, err := f.Stat()
+	if err != nil {
+		log.Printf("[StreamFile] stat [%s]: %v", file.StoredName, err)
+		http.Error(w, "failed to stat file", http.StatusInternalServerError)
+		return
+	}
+
+	mt := file.MimeType
+	disp := "attachment"
+	if strings.HasPrefix(mt, "video/") || strings.HasPrefix(mt, "audio/") ||
+		strings.HasPrefix(mt, "image/") || strings.HasPrefix(mt, "text/") ||
+		mt == "application/pdf" {
+		disp = "inline"
+	}
+	w.Header().Set("Content-Disposition", disp+`; filename="`+file.OriginalName+`"`)
+	w.Header().Set("Content-Type", mt)
+
+	http.ServeContent(w, r, file.OriginalName, stat.ModTime(), f)
 }
 
 func UpdateOwner(w http.ResponseWriter, r *http.Request) {
